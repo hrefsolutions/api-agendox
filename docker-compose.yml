@@ -1,0 +1,65 @@
+name: agendox
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: agendox-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-agendox}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-agendox}
+      POSTGRES_DB: ${POSTGRES_DB:-agendox}
+    ports:
+      - '${POSTGRES_PORT:-5432}:5432'
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-agendox} -d ${POSTGRES_DB:-agendox}']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # One-shot: applies Drizzle migrations + the raw EXCLUDE constraint, then
+  # exits. The API waits for it to complete successfully before starting, so
+  # migrations run exactly once per deploy (not per API replica).
+  migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: migrator
+    container_name: agendox-migrate
+    restart: 'no'
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-agendox}:${POSTGRES_PASSWORD:-agendox}@postgres:5432/${POSTGRES_DB:-agendox}
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: agendox-api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      PORT: ${PORT:-3000}
+      # Override the host to reach Postgres over the compose network.
+      DATABASE_URL: postgresql://${POSTGRES_USER:-agendox}:${POSTGRES_PASSWORD:-agendox}@postgres:5432/${POSTGRES_DB:-agendox}
+    ports:
+      - '${PORT:-3000}:${PORT:-3000}'
+
+volumes:
+  pgdata:
+    driver: local

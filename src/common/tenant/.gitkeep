@@ -1,0 +1,3 @@
+# Tenant context (Milestone 1): TenantContext, request-scoped organizationId
+# resolution and propagation to use-cases and repositories.
+# See docs/04-multi-tenancy.md.

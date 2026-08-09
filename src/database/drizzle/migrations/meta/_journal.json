@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1785447391825,
+      "tag": "0000_furry_turbo",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1785968349103,
+      "tag": "0001_opposite_skin",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1786315586391,
+      "tag": "0002_oval_night_thrasher",
+      "breakpoints": true
+    }
+  ]
+}

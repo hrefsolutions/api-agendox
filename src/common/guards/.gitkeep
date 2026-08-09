@@ -1,0 +1,2 @@
+# Guards (Milestone 1+): AuthGuard, TenantGuard, RoleGuard, SubscriptionGuard,
+# SuperAdminGuard, CustomerOtpGuard. See docs/11-backend-nestjs.md.

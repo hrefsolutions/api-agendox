@@ -1,0 +1,2 @@
+# Drizzle SQL migrations are generated here via `pnpm db:generate`
+# and applied via `pnpm db:migrate`. No domain migrations exist in Milestone 0.
