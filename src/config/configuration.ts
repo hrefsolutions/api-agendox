@@ -62,7 +62,7 @@ export const mailConfig = registerAs('mail', () => ({
     port: toInt(process.env.SMTP_PORT, 465),
     secure: toBoolean(process.env.SMTP_SECURE, true),
     user: process.env.SMTP_USER ?? '',
-    pass: process.env.SMTP_PASS ?? '',
+    pass: process.env.APP_KEY ?? '',
   },
 }));
 

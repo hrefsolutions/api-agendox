@@ -230,11 +230,14 @@ export class EnvironmentVariables {
   @IsNotEmpty()
   SMTP_USER?: string;
 
-  /** SMTP password / app password. Required when `MAIL_PROVIDER=smtp`. */
+  /**
+   * SMTP app key (Gmail App Password, 16 chars). Required when
+   * `MAIL_PROVIDER=smtp`. Replaces the former `SMTP_PASS`.
+   */
   @ValidateIf((o: EnvironmentVariables) => o.MAIL_PROVIDER === MailProvider.Smtp)
   @IsString()
   @IsNotEmpty()
-  SMTP_PASS?: string;
+  APP_KEY?: string;
 
   /** Payment gateway. `mercadopago` requires the `MP_*` variables below. */
   @IsOptional()
