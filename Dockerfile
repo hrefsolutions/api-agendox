@@ -34,9 +34,13 @@ COPY . .
 CMD ["pnpm", "db:deploy"]
 
 # ---------- Production dependencies only ----------
+# `--ignore-scripts` skips the `prepare` hook (husky), which is a devDependency
+# and therefore absent from a `--prod` install. No production dependency needs a
+# build script: `pnpm.onlyBuiltDependencies` allows esbuild alone, and esbuild is
+# only pulled in by dev tooling.
 FROM base AS prod-deps
 COPY package.json pnpm-lock.yaml .npmrc ./
-RUN pnpm install --frozen-lockfile --prod
+RUN pnpm install --frozen-lockfile --prod --ignore-scripts
 
 # ---------- Runtime ----------
 FROM node:22-alpine AS runner
