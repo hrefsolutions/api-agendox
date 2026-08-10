@@ -8,9 +8,13 @@ RUN corepack enable
 WORKDIR /app
 
 # ---------- Dependencies (all, incl. dev) for building ----------
+# No BuildKit cache mount: hosted builders (Railway) require the mount id to be
+# prefixed with their own service id, which would pin this file to one provider.
+# The `COPY` above already scopes the layer to the lockfile, so installs are only
+# re-run when dependencies actually change.
 FROM base AS deps
 COPY package.json pnpm-lock.yaml .npmrc ./
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
+RUN pnpm install --frozen-lockfile
 
 # ---------- Build ----------
 FROM base AS build
@@ -32,7 +36,7 @@ CMD ["pnpm", "db:deploy"]
 # ---------- Production dependencies only ----------
 FROM base AS prod-deps
 COPY package.json pnpm-lock.yaml .npmrc ./
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile --prod
+RUN pnpm install --frozen-lockfile --prod
 
 # ---------- Runtime ----------
 FROM node:22-alpine AS runner
