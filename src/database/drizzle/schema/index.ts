@@ -10,6 +10,7 @@
  * `organization_id` (see docs/04-multi-tenancy.md and docs/12-base-datos.md).
  */
 export * from '../../../modules/organizations/infrastructure/persistence/organization.schema';
+export * from '../../../modules/organizations/infrastructure/persistence/organization-features.schema';
 export * from '../../../modules/users/infrastructure/persistence/user.schema';
 export * from '../../../modules/trials/infrastructure/persistence/trial.schema';
 export * from '../../../modules/authentication/infrastructure/persistence/refresh-token.schema';

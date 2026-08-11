@@ -6,6 +6,7 @@ import {
   ORGANIZATION_REPOSITORY,
   type OrganizationRepository,
 } from '../../domain/repositories/organization.repository';
+import { OrganizationFeaturesService } from '../organization-features.service';
 import type { OrganizationView } from '../dtos/register-organization.dto';
 
 /** Returns the authenticated user's organization (tenant-scoped read). */
@@ -13,10 +14,14 @@ import type { OrganizationView } from '../dtos/register-organization.dto';
 export class GetCurrentOrganization {
   constructor(
     @Inject(ORGANIZATION_REPOSITORY) private readonly organizations: OrganizationRepository,
+    private readonly features: OrganizationFeaturesService,
   ) {}
 
   async execute(organizationId: string): Promise<OrganizationView> {
-    const organization = await this.organizations.findById(organizationId);
+    const [organization, features] = await Promise.all([
+      this.organizations.findById(organizationId),
+      this.features.get(organizationId),
+    ]);
     if (!organization) {
       throw new NotFoundError('Organización no encontrada');
     }
@@ -27,6 +32,7 @@ export class GetCurrentOrganization {
       status: organization.status,
       timezone: organization.timezone,
       createdAt: organization.createdAt,
+      features,
     };
   }
 }

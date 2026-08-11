@@ -4,6 +4,7 @@ import { Logger } from 'nestjs-pino';
 
 import type { MailConfig } from '@config/configuration';
 import { AppointmentsModule } from '@modules/appointments/appointments.module';
+import { OrganizationsModule } from '@modules/organizations/organizations.module';
 import { SettingsModule } from '@modules/settings/settings.module';
 import { UsersModule } from '@modules/users/users.module';
 
@@ -31,7 +32,7 @@ import { PushController } from './interface/http/push.controller';
  * Portal can offer the same to end customers.
  */
 @Module({
-  imports: [AppointmentsModule, UsersModule, SettingsModule],
+  imports: [AppointmentsModule, UsersModule, SettingsModule, OrganizationsModule],
   controllers: [NotificationsController, PushController],
   providers: [
     EmailTemplateRenderer,

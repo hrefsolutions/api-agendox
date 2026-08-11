@@ -23,6 +23,10 @@ import {
   DepositConfirmed,
   DepositRequested,
 } from '@modules/appointments/domain/events/deposit.events';
+import {
+  ORGANIZATION_REPOSITORY,
+  type OrganizationRepository,
+} from '@modules/organizations/domain/repositories/organization.repository';
 import { SettingsService } from '@modules/settings/application/settings.service';
 import {
   USER_REPOSITORY,
@@ -60,6 +64,7 @@ export class NotificationDispatcher {
     @Inject(EMAIL_SENDER) private readonly email: EmailSender,
     @Inject(APPOINTMENT_REPOSITORY) private readonly appointments: AppointmentRepository,
     @Inject(USER_REPOSITORY) private readonly users: UserRepository,
+    @Inject(ORGANIZATION_REPOSITORY) private readonly organizations: OrganizationRepository,
     private readonly settings: SettingsService,
     @Inject(CLOCK) private readonly clock: Clock,
   ) {}
@@ -249,9 +254,15 @@ export class NotificationDispatcher {
   ): Promise<void> {
     const s = appointment.snapshot;
     await this.persist(s.organizationId, RecipientType.Client, s.clientId, opts, appointment.id);
+    // La app de reservas sirve todos los negocios desde un mismo dominio, con el
+    // slug en el path: sin él, el click en la notificación cae en la raíz, que no
+    // es la página de ningún negocio.
+    const organization = await this.organizations.findById(s.organizationId);
     await this.pushTo(s.organizationId, RecipientType.Client, s.clientId, {
       title: opts.title,
       body: opts.body,
+      url: organization ? `/${organization.slug}/portal` : '/',
+      tag: `appointment:${appointment.id}`,
     });
     if (opts.email) {
       await this.email.send({
@@ -265,7 +276,14 @@ export class NotificationDispatcher {
 
   private async notifyStaff(
     organizationId: string,
-    opts: { type: string; title: string; body: string; appointmentId: string },
+    opts: {
+      type: string;
+      title: string;
+      body: string;
+      appointmentId: string;
+      /** Sección del panel a la que lleva el click. Por defecto, el calendario. */
+      url?: string;
+    },
   ): Promise<void> {
     const staff = await this.users.listActiveByOrganization(organizationId);
     for (const user of staff) {
@@ -279,6 +297,8 @@ export class NotificationDispatcher {
       await this.pushTo(organizationId, RecipientType.StaffUser, user.id, {
         title: opts.title,
         body: opts.body,
+        url: opts.url ?? '/calendar',
+        tag: `appointment:${opts.appointmentId}`,
       });
     }
   }

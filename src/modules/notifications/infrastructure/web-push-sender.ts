@@ -27,12 +27,19 @@ export class WebPushSender implements PushSender {
       this.enabled = true;
     } else {
       this.enabled = false;
+      // Sin este aviso, el push "funciona" en silencio: la app muestra el
+      // toaster in-app, nadie recibe la notificación del navegador y no hay
+      // ninguna señal de por qué.
+      this.logger.warn(
+        'Web Push deshabilitado: faltan VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY. ' +
+          'Generá el par con `pnpm exec web-push generate-vapid-keys` y cargalas en el entorno.',
+      );
     }
   }
 
   async send(target: PushTarget, payload: PushPayload): Promise<PushResult> {
     if (!this.enabled) {
-      return { ok: false, gone: false };
+      return { ok: false, gone: false, reason: 'not-configured' };
     }
     try {
       await webpush.sendNotification(
@@ -43,8 +50,11 @@ export class WebPushSender implements PushSender {
     } catch (error) {
       const statusCode = (error as { statusCode?: number }).statusCode;
       const gone = statusCode === 404 || statusCode === 410;
-      this.logger.warn({ err: error, endpoint: target.endpoint }, 'Web Push delivery failed');
-      return { ok: false, gone };
+      this.logger.warn(
+        { err: error, statusCode, endpoint: target.endpoint },
+        'Web Push delivery failed',
+      );
+      return { ok: false, gone, reason: 'delivery-failed' };
     }
   }
 }

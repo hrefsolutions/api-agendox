@@ -47,13 +47,22 @@ export class MercadoPagoGateway implements PaymentGateway {
         },
       }),
     });
-    const data = (await res.json().catch(() => ({}))) as {
+    const data = (await res.json().catch(() => ({}))) as MpErrorBody & {
       id?: string;
       init_point?: string;
     };
     if (!res.ok || !data.id || !data.init_point) {
-      this.logger.error({ status: res.status, data }, 'Mercado Pago preapproval failed');
-      throw new BusinessRuleError('No se pudo iniciar el checkout de pago');
+      this.logger.error(
+        { status: res.status, data, backUrl: input.backUrl, payerEmail: input.payerEmail },
+        'Mercado Pago preapproval failed',
+      );
+      // El detalle de MP dice exactamente qué campo rechazó (un back_url que no
+      // es HTTPS pública, un payer_email inválido o igual al de la cuenta
+      // cobradora, un monto por debajo del mínimo). Tragárselo obliga a leer los
+      // logs del servidor para diagnosticar algo que el usuario ya está viendo.
+      throw new BusinessRuleError(
+        `No se pudo iniciar el checkout de pago: ${describeMpError(res.status, data)}`,
+      );
     }
     return { providerSubscriptionId: data.id, initPoint: data.init_point };
   }
@@ -168,6 +177,40 @@ export class MercadoPagoGateway implements PaymentGateway {
     if (!data.preapproval_id) return null;
     return { preapprovalId: data.preapproval_id, status: data.payment?.status ?? data.status ?? '' };
   }
+}
+
+/** Forma de los errores de la API de Mercado Pago (varía según el endpoint). */
+interface MpErrorBody {
+  message?: string;
+  error?: string;
+  cause?: Array<{ code?: string | number; description?: string }> | string;
+}
+
+/**
+ * Arma un mensaje legible con lo que devolvió Mercado Pago. Prioriza `cause`,
+ * que es donde viaja el detalle útil; cae al `message` y, si no hay nada, al
+ * código HTTP con una pista de qué suele significar.
+ */
+function describeMpError(status: number, body: MpErrorBody): string {
+  const causes = Array.isArray(body.cause)
+    ? body.cause
+        .map((c) => c.description ?? (c.code !== undefined ? String(c.code) : ''))
+        .filter(Boolean)
+    : typeof body.cause === 'string' && body.cause
+      ? [body.cause]
+      : [];
+
+  if (causes.length > 0) return causes.join('; ');
+  if (body.message) return body.message;
+  if (body.error) return body.error;
+
+  if (status === 401 || status === 403) {
+    return 'la pasarela rechazó las credenciales (revisá MP_ACCESS_TOKEN)';
+  }
+  if (status === 400) {
+    return 'la pasarela rechazó los datos del checkout (revisá APP_DASHBOARD_URL y el email del pagador)';
+  }
+  return `la pasarela respondió ${status}`;
 }
 
 function mapPreapprovalStatus(status: string | undefined): ProviderSubscriptionStatus | null {

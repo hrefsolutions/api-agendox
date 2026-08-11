@@ -5,7 +5,7 @@ import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { TenantId } from '@common/decorators/tenant-id.decorator';
 import type { StaffPrincipal } from '@common/tenant/request-context';
 
-import { PushService } from '../../application/push.service';
+import { PushService, type VapidPublicKeyView } from '../../application/push.service';
 import { RecipientType } from '../../domain/recipient-type.enum';
 import { PushSubscribeRequest, PushUnsubscribeRequest } from './push.requests';
 
@@ -16,7 +16,7 @@ export class PushController {
   constructor(private readonly push: PushService) {}
 
   @Get('vapid-public-key')
-  vapidPublicKey(): { publicKey: string } {
+  vapidPublicKey(): VapidPublicKeyView {
     return this.push.getVapidPublicKey();
   }
 
