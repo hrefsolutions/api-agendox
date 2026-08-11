@@ -6,6 +6,7 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
+  IsUrl,
   Max,
   Min,
   ValidateIf,
@@ -231,27 +232,66 @@ export class EnvironmentVariables {
   SMTP_USER?: string;
 
   /**
-   * SMTP app key (Gmail App Password, 16 chars). Required when
-   * `MAIL_PROVIDER=smtp`. Replaces the former `SMTP_PASS`.
+   * SMTP password (with Gmail, the 16-char App Password — never the account
+   * password). Preferred name; `APP_KEY` is still read for compatibility.
    */
-  @ValidateIf((o: EnvironmentVariables) => o.MAIL_PROVIDER === MailProvider.Smtp)
+  @IsOptional()
+  @IsString()
+  SMTP_PASS?: string;
+
+  /**
+   * Legacy name for {@link SMTP_PASS}. Only required when `MAIL_PROVIDER=smtp`
+   * and `SMTP_PASS` is absent, so existing deployments keep booting.
+   */
+  @ValidateIf(
+    (o: EnvironmentVariables) => o.MAIL_PROVIDER === MailProvider.Smtp && !o.SMTP_PASS,
+  )
   @IsString()
   @IsNotEmpty()
   APP_KEY?: string;
+
+  /**
+   * Web Push VAPID keys (`pnpm exec web-push generate-vapid-keys`). Both or
+   * neither: a half-configured pair silently disables push, which is the exact
+   * failure mode this pairing check exists to prevent.
+   */
+  @IsOptional()
+  @IsString()
+  VAPID_PUBLIC_KEY?: string;
+
+  @IsOptional()
+  @IsString()
+  VAPID_PRIVATE_KEY?: string;
+
+  /** `mailto:` de contacto que los push services usan para avisar problemas. */
+  @IsOptional()
+  @IsString()
+  VAPID_SUBJECT?: string;
 
   /** Payment gateway. `mercadopago` requires the `MP_*` variables below. */
   @IsOptional()
   @IsEnum(PaymentProvider)
   PAYMENT_PROVIDER: PaymentProvider = PaymentProvider.Mock;
 
-  /** Public base URL of the dashboard app, for the checkout return URL. */
-  @IsOptional()
-  @IsString()
+  /**
+   * Public base URL of the dashboard app, for the checkout return URL.
+   *
+   * With `PAYMENT_PROVIDER=mercadopago` this must be a public HTTPS URL: Mercado
+   * Pago rejects the `back_url` of a preapproval otherwise, and the failure
+   * surfaces as a generic "checkout could not start" at the worst moment. The
+   * default (`localhost`) is fine for the `mock` gateway only.
+   */
+  @ValidateIf((o: EnvironmentVariables) => o.PAYMENT_PROVIDER === PaymentProvider.MercadoPago)
+  @IsUrl({ protocols: ['https'], require_protocol: true, require_tld: true })
   APP_DASHBOARD_URL = 'http://localhost:3001';
 
-  /** Public base URL of this API, for the provider webhook / notification URL. */
-  @IsOptional()
-  @IsString()
+  /**
+   * Public base URL of this API, for the provider webhook / notification URL.
+   * Same HTTPS requirement as {@link APP_DASHBOARD_URL} — Mercado Pago has to be
+   * able to reach it from the internet to deliver webhooks.
+   */
+  @ValidateIf((o: EnvironmentVariables) => o.PAYMENT_PROVIDER === PaymentProvider.MercadoPago)
+  @IsUrl({ protocols: ['https'], require_protocol: true, require_tld: true })
   API_PUBLIC_URL = 'http://localhost:3000';
 
   /** Mercado Pago access token. Required when `PAYMENT_PROVIDER=mercadopago`. */
@@ -285,5 +325,60 @@ export function validateEnv(config: Record<string, unknown>): EnvironmentVariabl
     throw new Error(`Invalid environment configuration: ${details}`);
   }
 
+  const crossFieldErrors = validateRelations(validated);
+  if (crossFieldErrors.length > 0) {
+    throw new Error(`Invalid environment configuration: ${crossFieldErrors.join('; ')}`);
+  }
+
   return validated;
+}
+
+/**
+ * Reglas que involucran más de una variable y no se pueden expresar como
+ * decorador de un campo. Todas apuntan al mismo problema: configuraciones que
+ * arrancan sin queja y fallan después, en runtime, con un síntoma que no señala
+ * la causa.
+ */
+function validateRelations(env: EnvironmentVariables): string[] {
+  const problems: string[] = [];
+
+  if (env.MAIL_PROVIDER === MailProvider.Smtp) {
+    const fromDomain = emailDomain(env.MAIL_FROM);
+    const userDomain = emailDomain(env.SMTP_USER);
+    // El From tiene que estar alineado con la cuenta que autentica, o el correo
+    // se firma para un dominio y se presenta como otro: SPF/DKIM no alinean y
+    // Gmail y Outlook lo mandan a spam. Es la causa #1 de "llega pero a spam".
+    if (fromDomain && userDomain && fromDomain !== userDomain) {
+      problems.push(
+        `MAIL_FROM usa el dominio "${fromDomain}" pero SMTP_USER autentica contra "${userDomain}". ` +
+          'Deben coincidir o el correo cae en spam por falta de alineación SPF/DKIM. ' +
+          `Usá MAIL_FROM="Agendox <${env.SMTP_USER}>" o configurá un alias verificado en ese dominio.`,
+      );
+    }
+  }
+
+  const hasPublicKey = !!env.VAPID_PUBLIC_KEY;
+  const hasPrivateKey = !!env.VAPID_PRIVATE_KEY;
+  if (hasPublicKey !== hasPrivateKey) {
+    problems.push(
+      'VAPID_PUBLIC_KEY y VAPID_PRIVATE_KEY se configuran juntas o ninguna. ' +
+        'Generá el par con `pnpm exec web-push generate-vapid-keys`.',
+    );
+  }
+  if (hasPublicKey && env.VAPID_SUBJECT && !/^mailto:\S+@\S+\.\S+$/.test(env.VAPID_SUBJECT)) {
+    // Apple valida el subject antes de aceptar el push en Safari/iOS.
+    problems.push(
+      `VAPID_SUBJECT debe ser un mailto: con un email real (recibido: "${env.VAPID_SUBJECT}").`,
+    );
+  }
+
+  return problems;
+}
+
+/** Dominio de un `Nombre <user@host>` o de un email pelado. */
+function emailDomain(value?: string): string | null {
+  if (!value) return null;
+  const address = value.match(/<([^>]+)>/)?.[1] ?? value;
+  const domain = address.trim().split('@')[1];
+  return domain ? domain.toLowerCase() : null;
 }

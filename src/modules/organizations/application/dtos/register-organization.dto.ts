@@ -1,3 +1,5 @@
+import type { OrganizationFeatures } from '../../domain/organization-features';
+
 export interface RegisterOrganizationCommand {
   organizationName: string;
   slug: string;
@@ -23,4 +25,9 @@ export interface OrganizationView {
   status: string;
   timezone: string;
   createdAt: Date;
+  /**
+   * Flags que gobierna el super admin. Viajan acá para que el panel del negocio
+   * sepa qué habilitar sin un request aparte: el layout ya pide esta ruta.
+   */
+  features: OrganizationFeatures;
 }

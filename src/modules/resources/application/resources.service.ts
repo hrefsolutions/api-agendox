@@ -208,11 +208,18 @@ export class ResourcesService {
   }
 }
 
-/** Converts a `YYYY-MM-DDTHH:MM` wall-clock string in `timeZone` to a UTC instant. */
+/**
+ * Converts a `YYYY-MM-DDTHH:MM` wall-clock string in `timeZone` to a UTC instant.
+ *
+ * El formato ya viene garantizado por el `@Matches(LOCAL_DATETIME_PATTERN)` del
+ * request, así que las dos mitades del split siempre existen (misma convención
+ * que `parseIsoDate`/`parseWallTime`: se valida en el borde HTTP y de acá para
+ * adentro se confía).
+ */
 function localDateTimeToUtc(local: string, timeZone: string): Date {
   const [datePart, timePart] = local.split('T');
-  const date = parseIsoDate(datePart!);
-  const { hours, minutes } = parseWallTime(timePart!);
+  const date = parseIsoDate(datePart);
+  const { hours, minutes } = parseWallTime(timePart);
   return new Date(zonedTimeToUtcMs(date, hours, minutes, timeZone));
 }
 

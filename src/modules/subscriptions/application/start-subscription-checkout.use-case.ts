@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 
 import type { PaymentConfig } from '@config/configuration';
 import { CLOCK, type Clock } from '@shared/application';
-import { NotFoundError } from '@shared/errors';
+import { BusinessRuleError, NotFoundError } from '@shared/errors';
 
 import {
   PLAN_REPOSITORY,
@@ -50,6 +50,7 @@ export class StartSubscriptionCheckout {
     if (!plan || !plan.isActive) {
       throw new NotFoundError('Plan no encontrado o inactivo');
     }
+    assertPayableEmail(payerEmail);
 
     const now = this.clock.now();
     const subscription = Subscription.startCheckout({ organizationId, planId, now });
@@ -70,5 +71,27 @@ export class StartSubscriptionCheckout {
     await this.subscriptions.save(subscription);
 
     return { initPoint: checkout.initPoint };
+  }
+}
+
+/**
+ * TLDs reservados por la RFC 2606 / RFC 6761: no resuelven en internet, así que
+ * la pasarela rechaza el pagador. Aparecen sobre todo en cuentas de seed y de
+ * demo (`owner@demo.test`), y el error que devuelve el proveedor no dice nada
+ * sobre el email — conviene cortarlo acá con un mensaje que sí lo diga.
+ */
+const RESERVED_TLDS = ['test', 'example', 'invalid', 'localhost', 'local'];
+
+function assertPayableEmail(email: string): void {
+  const domain = email.trim().toLowerCase().split('@')[1];
+  const tld = domain?.split('.').pop();
+  if (!domain || !tld) {
+    throw new BusinessRuleError('El email de la cuenta no es válido para facturar.');
+  }
+  if (RESERVED_TLDS.includes(tld)) {
+    throw new BusinessRuleError(
+      `La cuenta usa el email "${email}", cuyo dominio no existe en internet y la pasarela de pago rechaza. ` +
+        'Cambiá el email del usuario por uno real antes de suscribir el negocio.',
+    );
   }
 }

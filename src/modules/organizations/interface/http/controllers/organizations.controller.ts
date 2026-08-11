@@ -1,37 +1,22 @@
-import { Body, Controller, Get, Post } from '@nestjs/common';
-import { ApiBearerAuth, ApiCreatedResponse, ApiOkResponse, ApiTags } from '@nestjs/swagger';
-import { Throttle } from '@nestjs/throttler';
+import { Controller, Get } from '@nestjs/common';
+import { ApiBearerAuth, ApiOkResponse, ApiTags } from '@nestjs/swagger';
 
-import { Public } from '@common/decorators/public.decorator';
 import { TenantId } from '@common/decorators/tenant-id.decorator';
 
-import type {
-  OrganizationView,
-  RegisterOrganizationResult,
-} from '../../../application/dtos/register-organization.dto';
+import type { OrganizationView } from '../../../application/dtos/register-organization.dto';
 import { GetCurrentOrganization } from '../../../application/use-cases/get-current-organization.use-case';
-import { RegisterOrganization } from '../../../application/use-cases/register-organization.use-case';
-import { RegisterOrganizationRequest } from '../requests/register-organization.request';
-import {
-  OrganizationResponse,
-  RegisterOrganizationResponse,
-} from '../responses/organization.responses';
+import { OrganizationResponse } from '../responses/organization.responses';
 
+/**
+ * API del negocio sobre su propia organización. Es solo lectura: el alta, la
+ * edición y la baja de organizaciones son atribución exclusiva del super admin
+ * (ver `POST/PATCH/DELETE /admin/organizations`), así que acá no hay ninguna
+ * ruta pública de registro.
+ */
 @ApiTags('organizations')
 @Controller('organizations')
 export class OrganizationsController {
-  constructor(
-    private readonly registerOrganization: RegisterOrganization,
-    private readonly getCurrentOrganization: GetCurrentOrganization,
-  ) {}
-
-  @Public()
-  @Throttle({ default: { limit: 5, ttl: 60000 } })
-  @Post('register')
-  @ApiCreatedResponse({ type: RegisterOrganizationResponse })
-  register(@Body() body: RegisterOrganizationRequest): Promise<RegisterOrganizationResult> {
-    return this.registerOrganization.execute(body);
-  }
+  constructor(private readonly getCurrentOrganization: GetCurrentOrganization) {}
 
   @Get('current')
   @ApiBearerAuth()

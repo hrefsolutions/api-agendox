@@ -17,6 +17,17 @@ export interface SubscribeInput {
   userAgent?: string | null;
 }
 
+export interface VapidPublicKeyView {
+  publicKey: string;
+  /**
+   * `false` cuando el servidor no tiene las claves VAPID cargadas. El front lo
+   * necesita para distinguir "tu navegador no soporta push" de "el servidor no
+   * está configurado": son dos problemas distintos y solo uno lo puede resolver
+   * el usuario.
+   */
+  configured: boolean;
+}
+
 /** Manages Web Push subscriptions for a recipient (staff or customer). */
 @Injectable()
 export class PushService {
@@ -31,8 +42,8 @@ export class PushService {
     this.vapidPublicKey = configService.getOrThrow<PushConfig>('push').vapidPublicKey;
   }
 
-  getVapidPublicKey(): { publicKey: string } {
-    return { publicKey: this.vapidPublicKey };
+  getVapidPublicKey(): VapidPublicKeyView {
+    return { publicKey: this.vapidPublicKey, configured: !!this.vapidPublicKey };
   }
 
   subscribe(

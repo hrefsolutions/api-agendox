@@ -16,6 +16,7 @@ import { Public } from '@common/decorators/public.decorator';
 import type { CustomerPrincipal } from '@common/tenant/request-context';
 
 import type { FeedItemView } from '@modules/notifications/application/notification-feed.service';
+import type { VapidPublicKeyView } from '@modules/notifications/application/push.service';
 import {
   PushSubscribeRequest,
   PushUnsubscribeRequest,
@@ -49,7 +50,7 @@ export class CustomerNotificationsController {
   }
 
   @Get('push/vapid-public-key')
-  vapidPublicKey(): { publicKey: string } {
+  vapidPublicKey(): VapidPublicKeyView {
     return this.notifications.vapidPublicKey();
   }
 

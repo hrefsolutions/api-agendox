@@ -16,9 +16,10 @@ import { SuperAdminGuard } from './interface/http/super-admin.guard';
 
 /**
  * Super Admin module (MS5). Platform-global operator with a separate identity,
- * secret and guard; cross-tenant read model + controlled tenant status changes.
+ * secret and guard; cross-tenant read model + el ciclo de vida completo de las
+ * organizaciones (alta, edición, suspensión, baja y flags de funcionalidad).
  * Imports AuthenticationModule for the shared password hasher and
- * OrganizationsModule for the tenant repository (suspend/reactivate).
+ * OrganizationsModule for the tenant repository, el alta y los feature flags.
  */
 @Module({
   imports: [AuthenticationModule, OrganizationsModule, JwtModule.register({})],

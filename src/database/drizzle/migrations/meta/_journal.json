@@ -22,6 +22,13 @@
       "when": 1786315586391,
       "tag": "0002_oval_night_thrasher",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1786475526729,
+      "tag": "0003_flashy_lila_cheney",
+      "breakpoints": true
     }
   ]
 }

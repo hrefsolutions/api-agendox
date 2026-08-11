@@ -62,7 +62,9 @@ export const mailConfig = registerAs('mail', () => ({
     port: toInt(process.env.SMTP_PORT, 465),
     secure: toBoolean(process.env.SMTP_SECURE, true),
     user: process.env.SMTP_USER ?? '',
-    pass: process.env.APP_KEY ?? '',
+    // `SMTP_PASS` es el nombre correcto; `APP_KEY` queda como fallback para no
+    // romper los deploys que ya lo tienen seteado.
+    pass: process.env.SMTP_PASS ?? process.env.APP_KEY ?? '',
   },
 }));
 

@@ -54,6 +54,30 @@ export class Organization extends AggregateRoot {
     this.props.updatedAt = now;
   }
 
+  /**
+   * Super-admin action: baja definitiva del negocio.
+   *
+   * Es una baja lógica, no un borrado de filas: los turnos, los clientes y la
+   * facturación siguen existiendo (hacen falta para historia y para cualquier
+   * reclamo posterior), pero la organización deja de ser operativa y nadie
+   * puede volver a entrar. Un borrado físico dejaría huérfanas las tablas de
+   * todos los módulos y no es reversible ante un error del operador.
+   */
+  disable(now: Date): void {
+    this.props.status = OrganizationStatus.Disabled;
+    this.props.updatedAt = now;
+  }
+
+  /** Super-admin action: corrige el nombre o la zona horaria del negocio. */
+  updateProfile(input: { name?: string; timezone?: string }, now: Date): void {
+    if (input.name !== undefined) {
+      const name = input.name.trim();
+      if (name.length > 0) this.props.name = name;
+    }
+    if (input.timezone !== undefined) this.props.timezone = input.timezone;
+    this.props.updatedAt = now;
+  }
+
   /** Whether the organization can operate (not suspended/disabled). */
   get isOperational(): boolean {
     return (

@@ -10,7 +10,11 @@ import {
   NotificationFeedService,
   type FeedItemView,
 } from '@modules/notifications/application/notification-feed.service';
-import { PushService, type SubscribeInput } from '@modules/notifications/application/push.service';
+import {
+  PushService,
+  type SubscribeInput,
+  type VapidPublicKeyView,
+} from '@modules/notifications/application/push.service';
 import { RecipientType } from '@modules/notifications/domain/recipient-type.enum';
 
 import type { CustomerPrincipal } from '@common/tenant/request-context';
@@ -42,7 +46,7 @@ export class CustomerNotificationsService {
     await this.feed.markRead(customer.organizationId, RecipientType.Client, clientId, id);
   }
 
-  vapidPublicKey(): { publicKey: string } {
+  vapidPublicKey(): VapidPublicKeyView {
     return this.push.getVapidPublicKey();
   }
 
