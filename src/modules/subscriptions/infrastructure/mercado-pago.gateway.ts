@@ -31,7 +31,11 @@ export class MercadoPagoGateway implements PaymentGateway {
   async createSubscription(input: CreateSubscriptionInput): Promise<CheckoutResult> {
     const res = await fetch(`${MP_API}/preapproval`, {
       method: 'POST',
-      headers: this.authHeaders(),
+      // El id de nuestra suscripción es estable por intento de checkout, así que
+      // sirve de clave de idempotencia: un doble click o un reintento por timeout
+      // devuelven la preapproval ya creada en vez de generar una segunda, que
+      // dejaría al pagador con dos autorizaciones para el mismo plan.
+      headers: { ...this.authHeaders(), 'X-Idempotency-Key': input.subscriptionId },
       body: JSON.stringify({
         reason: `Agendox — ${input.planName}`,
         external_reference: input.subscriptionId,
