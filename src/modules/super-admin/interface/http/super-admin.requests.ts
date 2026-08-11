@@ -3,14 +3,29 @@ import { Type } from 'class-transformer';
 import {
   IsBoolean,
   IsEmail,
+  IsEnum,
   IsNotEmpty,
   IsOptional,
   IsString,
+  IsUUID,
   Matches,
   MaxLength,
   MinLength,
+  ValidateIf,
   ValidateNested,
 } from 'class-validator';
+
+/**
+ * Con qué arranca comercialmente un negocio nuevo.
+ *
+ * `TRIAL` es el camino normal: 30 días de prueba y después el dueño paga por la
+ * pasarela. `ACTIVE` deja la suscripción activa sin cobrar — cuentas de cortesía,
+ * internas o de QA — y exige elegir el plan.
+ */
+export enum OrganizationBilling {
+  Trial = 'TRIAL',
+  Active = 'ACTIVE',
+}
 
 export class SuperAdminLoginRequest {
   @ApiProperty({ example: 'admin@agendox.local' }) @IsEmail() email!: string;
@@ -63,6 +78,27 @@ export class CreateOrganizationRequest {
   @ValidateNested()
   @Type(() => CreateOrganizationOwnerRequest)
   owner!: CreateOrganizationOwnerRequest;
+
+  @ApiPropertyOptional({
+    enum: OrganizationBilling,
+    default: OrganizationBilling.Trial,
+    description: 'TRIAL: 30 días de prueba. ACTIVE: suscripción activa sin cobrar.',
+  })
+  @IsOptional()
+  @IsEnum(OrganizationBilling)
+  billing?: OrganizationBilling;
+
+  /** Obligatorio con `billing=ACTIVE`: no se puede activar sin saber qué plan. */
+  @ApiPropertyOptional({ description: 'Plan a otorgar. Requerido si billing=ACTIVE.' })
+  @ValidateIf((o: CreateOrganizationRequest) => o.billing === OrganizationBilling.Active)
+  @IsUUID()
+  planId?: string;
+}
+
+export class UpdateOwnerEmailRequest {
+  @ApiProperty({ example: 'dueño@negocio.com' })
+  @IsEmail()
+  email!: string;
 }
 
 export class UpdateOrganizationRequest {
@@ -94,4 +130,11 @@ export class UpdateOrganizationFeaturesRequest {
   @IsOptional()
   @IsBoolean()
   logoUpload?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Muestra la sección de Suscripción en el panel del negocio',
+  })
+  @IsOptional()
+  @IsBoolean()
+  subscriptionsEnabled?: boolean;
 }

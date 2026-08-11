@@ -73,6 +73,15 @@ export class User extends AggregateRoot {
     this.props.updatedAt = now;
   }
 
+  /**
+   * Cambia el email de login. La unicidad global es del repositorio, no de la
+   * entidad: acá solo se normaliza igual que en `create`.
+   */
+  changeEmail(email: string, now: Date): void {
+    this.props.email = email.trim().toLowerCase();
+    this.props.updatedAt = now;
+  }
+
   assignRole(role: Role, now: Date): void {
     this.props.role = role;
     this.props.updatedAt = now;

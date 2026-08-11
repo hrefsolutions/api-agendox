@@ -2,7 +2,8 @@ import { Inject, Injectable } from '@nestjs/common';
 import { Logger } from 'nestjs-pino';
 
 import { CLOCK, type Clock } from '@shared/application';
-import { NotFoundError, ValidationError } from '@shared/errors';
+import { Role } from '@shared/domain';
+import { ConflictError, NotFoundError, ValidationError } from '@shared/errors';
 
 import { OrganizationFeaturesService } from '@modules/organizations/application/organization-features.service';
 import { RegisterOrganization } from '@modules/organizations/application/use-cases/register-organization.use-case';
@@ -15,6 +16,14 @@ import {
   ORGANIZATION_REPOSITORY,
   type OrganizationRepository,
 } from '@modules/organizations/domain/repositories/organization.repository';
+import {
+  GrantSubscription,
+  type GrantedSubscriptionView,
+} from '@modules/subscriptions/application/grant-subscription.use-case';
+import {
+  USER_REPOSITORY,
+  type UserRepository,
+} from '@modules/users/domain/repositories/user.repository';
 
 import {
   ADMIN_READ_REPOSITORY,
@@ -32,6 +41,19 @@ export interface AdminOrgDetailWithFeatures extends AdminOrgDetail {
   features: OrganizationFeatures;
 }
 
+/** Alta de un negocio, con la elección comercial con la que arranca. */
+export interface CreateOrganizationCommand extends RegisterOrganizationCommand {
+  /** `TRIAL` (default) o `ACTIVE` para otorgar la suscripción sin cobrar. */
+  billing?: 'TRIAL' | 'ACTIVE';
+  /** Plan a otorgar. Obligatorio con `billing=ACTIVE`. */
+  planId?: string;
+}
+
+export interface CreateOrganizationResult extends RegisterOrganizationResult {
+  /** Presente solo si se otorgó una suscripción activa en el alta. */
+  subscription?: GrantedSubscriptionView;
+}
+
 /**
  * Platform operations for the super admin: cross-tenant reads and controlled
  * tenant status changes. Every mutation is audit-logged with the acting admin.
@@ -44,7 +66,9 @@ export class SuperAdminService {
   constructor(
     @Inject(ADMIN_READ_REPOSITORY) private readonly read: AdminReadRepository,
     @Inject(ORGANIZATION_REPOSITORY) private readonly organizations: OrganizationRepository,
+    @Inject(USER_REPOSITORY) private readonly users: UserRepository,
     private readonly registerOrganization: RegisterOrganization,
+    private readonly grantSubscription: GrantSubscription,
     private readonly features: OrganizationFeaturesService,
     @Inject(CLOCK) private readonly clock: Clock,
     private readonly logger: Logger,
@@ -67,13 +91,73 @@ export class SuperAdminService {
     return this.read.getMetrics(this.clock.now());
   }
 
+  /**
+   * Alta de un negocio. Con `billing=ACTIVE` además le otorga la suscripción
+   * activa sin pasar por la pasarela; el trial se crea igual (es parte de la
+   * transacción del alta) y queda irrelevante, porque una suscripción activa ya
+   * habilita la operación por sí sola.
+   */
   async createOrganization(
-    command: RegisterOrganizationCommand,
+    command: CreateOrganizationCommand,
     actingSuperAdminId: string,
-  ): Promise<RegisterOrganizationResult> {
-    const result = await this.registerOrganization.execute(command);
+  ): Promise<CreateOrganizationResult> {
+    const { billing = 'TRIAL', planId, ...registration } = command;
+    if (billing === 'ACTIVE' && !planId) {
+      throw new ValidationError('Para activar la suscripción hay que elegir un plan');
+    }
+
+    const result = await this.registerOrganization.execute(registration);
     this.audit(actingSuperAdminId, 'create', result.organizationId);
-    return result;
+
+    if (billing !== 'ACTIVE' || !planId) return result;
+
+    const granted = await this.grantSubscription.execute(result.organizationId, planId);
+    // Se audita aparte porque es lo que da acceso pago sin cobro: tiene que
+    // quedar en el log quién lo hizo y con qué plan.
+    this.logger.log(
+      {
+        superAdminId: actingSuperAdminId,
+        action: 'grant-subscription',
+        organizationId: result.organizationId,
+        planId: granted.planId,
+        planName: granted.planName,
+        currentPeriodEnd: granted.currentPeriodEnd,
+      },
+      '[super-admin] grant-subscription',
+    );
+    return { ...result, subscription: granted };
+  }
+
+  /**
+   * Cambia el email del usuario dueño. Existe porque el email del dueño no es
+   * solo credencial: es el `payer_email` que recibe la pasarela al suscribir, así
+   * que una cuenta creada con un email de prueba necesita poder corregirse sin
+   * recrear el negocio.
+   */
+  async updateOwnerEmail(
+    organizationId: string,
+    email: string,
+    actingSuperAdminId: string,
+  ): Promise<{ ownerEmail: string }> {
+    const org = await this.organizations.findById(organizationId);
+    if (!org) throw new NotFoundError('Organización no encontrada');
+
+    const owners = await this.users.listActiveByOrganization(organizationId);
+    const owner = owners.find((user) => user.role === Role.Owner);
+    if (!owner) throw new NotFoundError('La organización no tiene un usuario dueño activo');
+
+    const normalized = email.trim().toLowerCase();
+    if (normalized === owner.email) return { ownerEmail: owner.email };
+    // El email de staff es único global (ver ADR 0001), así que hay que chequear
+    // contra toda la plataforma y no solo contra esta organización.
+    if (await this.users.existsByEmail(normalized)) {
+      throw new ConflictError('El email ya está registrado');
+    }
+
+    owner.changeEmail(normalized, this.clock.now());
+    await this.users.save(owner);
+    this.audit(actingSuperAdminId, 'update-owner-email', organizationId);
+    return { ownerEmail: normalized };
   }
 
   async updateOrganization(

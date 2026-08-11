@@ -12,6 +12,9 @@ export class OrganizationFeaturesResponse {
 
   @ApiProperty({ description: 'Subida de logo como archivo habilitada' })
   logoUpload!: boolean;
+
+  @ApiProperty({ description: 'Sección de Suscripción visible en el panel del negocio' })
+  subscriptionsEnabled!: boolean;
 }
 
 export class OrganizationResponse {

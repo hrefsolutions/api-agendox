@@ -8,11 +8,12 @@ import { DrizzlePlanRepository } from './infrastructure/persistence/drizzle-plan
 /**
  * Plans module (M9). Global commercial plans. Exports {@link PLAN_REPOSITORY}
  * so subscriptions can validate/activate against a plan and the seed can create
- * defaults.
+ * defaults, y {@link PlansService} para que el super admin liste planes con su
+ * propio token (el controlador de acá está detrás del guard de staff).
  */
 @Module({
   controllers: [PlansController],
   providers: [{ provide: PLAN_REPOSITORY, useClass: DrizzlePlanRepository }, PlansService],
-  exports: [PLAN_REPOSITORY],
+  exports: [PLAN_REPOSITORY, PlansService],
 })
 export class PlansModule {}

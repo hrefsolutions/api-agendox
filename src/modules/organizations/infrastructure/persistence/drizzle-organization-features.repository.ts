@@ -31,6 +31,7 @@ export class DrizzleOrganizationFeaturesRepository
     return {
       whatsappNotifications: row.whatsappNotifications,
       logoUpload: row.logoUpload,
+      subscriptionsEnabled: row.subscriptionsEnabled,
     };
   }
 
@@ -53,7 +54,11 @@ export class DrizzleOrganizationFeaturesRepository
 
     const row = rows[0];
     return row
-      ? { whatsappNotifications: row.whatsappNotifications, logoUpload: row.logoUpload }
+      ? {
+          whatsappNotifications: row.whatsappNotifications,
+          logoUpload: row.logoUpload,
+          subscriptionsEnabled: row.subscriptionsEnabled,
+        }
       : inserted;
   }
 

@@ -1,0 +1,1 @@
+ALTER TABLE "organization_features" ADD COLUMN "subscriptions_enabled" boolean DEFAULT true NOT NULL;
