@@ -1,16 +1,15 @@
 import { NestFactory } from '@nestjs/core';
 import { Logger } from 'nestjs-pino';
 
-import { Money } from '@shared/domain';
 import { AppModule } from '@app/app.module';
 import { RegisterOrganization } from '@modules/organizations/application/use-cases/register-organization.use-case';
-import { Plan } from '@modules/plans/domain/entities/plan.entity';
-import { BillingPeriod } from '@modules/plans/domain/plan-status.enum';
 import {
   PLAN_REPOSITORY,
   type PlanRepository,
 } from '@modules/plans/domain/repositories/plan.repository';
 import { ConflictError } from '@shared/errors';
+
+import { reconcilePlans } from './plans.seed';
 
 /**
  * Idempotent bootstrap seed: creates the first Organization + Owner + Trial via
@@ -27,7 +26,7 @@ async function seed(): Promise<void> {
   const logger = app.get(Logger);
   const register = app.get(RegisterOrganization);
 
-  await seedPlans(app.get<PlanRepository>(PLAN_REPOSITORY), logger);
+  await reconcilePlans(app.get<PlanRepository>(PLAN_REPOSITORY), logger);
 
   try {
     const result = await register.execute({
@@ -52,28 +51,6 @@ async function seed(): Promise<void> {
     }
   } finally {
     await app.close();
-  }
-}
-
-/** Idempotently creates the default commercial plans (keyed by name). */
-async function seedPlans(plans: PlanRepository, logger: Logger): Promise<void> {
-  const now = new Date();
-  const defaults = [
-    { name: 'Basic', price: '9900.00', billingPeriod: BillingPeriod.Monthly },
-    { name: 'Pro', price: '19900.00', billingPeriod: BillingPeriod.Monthly },
-  ];
-  for (const def of defaults) {
-    if (await plans.findByName(def.name)) continue;
-    await plans.save(
-      Plan.create({
-        name: def.name,
-        price: Money.fromDecimalString(def.price),
-        currency: 'ARS',
-        billingPeriod: def.billingPeriod,
-        now,
-      }),
-    );
-    logger.log(`Seeded plan "${def.name}"`);
   }
 }
 

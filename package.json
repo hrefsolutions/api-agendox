@@ -31,6 +31,7 @@
     "db:constraints": "ts-node -r tsconfig-paths/register scripts/apply-constraints.ts",
     "db:deploy": "pnpm db:migrate && pnpm db:constraints",
     "db:seed": "ts-node -r tsconfig-paths/register src/database/seed/seed.ts",
+    "db:fix-plans": "ts-node -r tsconfig-paths/register scripts/fix-plans.ts",
     "db:seed:superadmin": "ts-node -r tsconfig-paths/register scripts/seed-super-admin.ts",
     "docker:up": "docker compose up -d",
     "docker:down": "docker compose down",

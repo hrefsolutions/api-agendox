@@ -3,6 +3,9 @@ import { JwtModule } from '@nestjs/jwt';
 
 import { AuthenticationModule } from '@modules/authentication/authentication.module';
 import { OrganizationsModule } from '@modules/organizations/organizations.module';
+import { PlansModule } from '@modules/plans/plans.module';
+import { SubscriptionsModule } from '@modules/subscriptions/subscriptions.module';
+import { UsersModule } from '@modules/users/users.module';
 
 import { LoginSuperAdmin } from './application/login-super-admin.use-case';
 import { SuperAdminService } from './application/super-admin.service';
@@ -22,7 +25,14 @@ import { SuperAdminGuard } from './interface/http/super-admin.guard';
  * OrganizationsModule for the tenant repository, el alta y los feature flags.
  */
 @Module({
-  imports: [AuthenticationModule, OrganizationsModule, JwtModule.register({})],
+  imports: [
+    AuthenticationModule,
+    OrganizationsModule,
+    UsersModule,
+    SubscriptionsModule,
+    PlansModule,
+    JwtModule.register({}),
+  ],
   controllers: [SuperAdminController],
   providers: [
     { provide: SUPER_ADMIN_REPOSITORY, useClass: DrizzleSuperAdminRepository },

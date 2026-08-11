@@ -51,6 +51,23 @@ export class Plan extends Entity {
     return new Plan(id, props);
   }
 
+  /**
+   * Corrige el nombre comercial y/o el precio de un plan existente.
+   *
+   * Conserva el `id`, que es lo que importa: las suscripciones referencian el
+   * plan por id, así que renombrar o repreciar no las deja huérfanas — pasan a
+   * ver el valor nuevo. El precio ya cobrado no se recalcula: cada suscripción
+   * activa sigue su período con el monto que la pasarela tenga registrado.
+   */
+  updateCommercials(input: { name?: string; price?: Money }, now: Date): void {
+    if (input.name !== undefined) {
+      const name = input.name.trim();
+      if (name.length > 0) this.props.name = name;
+    }
+    if (input.price !== undefined) this.props.price = input.price;
+    this.props.updatedAt = now;
+  }
+
   /** Number of months in one billing period. */
   get periodMonths(): number {
     return this.props.billingPeriod === BillingPeriod.Yearly ? 12 : 1;

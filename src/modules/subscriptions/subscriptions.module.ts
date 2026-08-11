@@ -12,6 +12,7 @@ import type { PaymentConfig } from '@config/configuration';
 import { CancelSubscription } from './application/cancel-subscription.use-case';
 import { ExpireSubscriptionsJob } from './application/expire-subscriptions.job';
 import { GetSubscriptionStatus } from './application/get-subscription-status.use-case';
+import { GrantSubscription } from './application/grant-subscription.use-case';
 import { HandleSubscriptionWebhook } from './application/handle-subscription-webhook.use-case';
 import { OrganizationAccessService } from './application/organization-access.service';
 import { StartSubscriptionCheckout } from './application/start-subscription-checkout.use-case';
@@ -56,8 +57,11 @@ import { SubscriptionsController } from './interface/http/subscriptions.controll
     HandleSubscriptionWebhook,
     CancelSubscription,
     GetSubscriptionStatus,
+    GrantSubscription,
     ExpireSubscriptionsJob,
   ],
-  exports: [ORGANIZATION_ACCESS, SUBSCRIPTION_REPOSITORY],
+  // `GrantSubscription` se exporta para el módulo de super-admin (alta de un
+  // negocio ya suscripto). No hay ruta de staff que llegue a él.
+  exports: [ORGANIZATION_ACCESS, SUBSCRIPTION_REPOSITORY, GrantSubscription],
 })
 export class SubscriptionsModule {}

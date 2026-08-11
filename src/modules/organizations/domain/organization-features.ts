@@ -16,12 +16,22 @@ export interface OrganizationFeatures {
    * no está montado; el logo por URL funciona siempre y no depende de este flag.
    */
   logoUpload: boolean;
+  /**
+   * Sección de Suscripción en el panel del negocio. Apagarla oculta el plan y el
+   * checkout: se usa para cuentas de cortesía, internas o de demo.
+   */
+  subscriptionsEnabled: boolean;
 }
 
-/** Default de una organización sin fila propia: nada habilitado. */
+/**
+ * Estado de una organización sin fila propia. No es "todo apagado": cada flag
+ * arranca en el valor que corresponde a un negocio nuevo — lo que todavía no
+ * existe, apagado; lo que ya funciona, prendido.
+ */
 export const DEFAULT_ORGANIZATION_FEATURES: OrganizationFeatures = {
   whatsappNotifications: false,
   logoUpload: false,
+  subscriptionsEnabled: true,
 };
 
 export interface OrganizationFeaturesRepository {
