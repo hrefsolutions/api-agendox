@@ -1,3 +1,5 @@
+import type { TermsStatus } from '@modules/legal/domain/terms';
+
 import type { OrganizationFeatures } from '../../domain/organization-features';
 
 export interface RegisterOrganizationCommand {
@@ -30,4 +32,10 @@ export interface OrganizationView {
    * sepa qué habilitar sin un request aparte: el layout ya pide esta ruta.
    */
   features: OrganizationFeatures;
+  /**
+   * Estado de aceptación de los Términos y Condiciones. Viaja acá por el mismo
+   * motivo que `features`: el layout del panel ya pide esta ruta, y así puede
+   * decidir si muestra el gate de aceptación sin un request extra.
+   */
+  terms: TermsStatus;
 }

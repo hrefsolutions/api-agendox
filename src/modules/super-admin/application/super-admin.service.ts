@@ -5,6 +5,8 @@ import { CLOCK, type Clock } from '@shared/application';
 import { Role } from '@shared/domain';
 import { ConflictError, NotFoundError, ValidationError } from '@shared/errors';
 
+import { TermsService } from '@modules/legal/application/terms.service';
+import type { TermsStatus } from '@modules/legal/domain/terms';
 import { OrganizationFeaturesService } from '@modules/organizations/application/organization-features.service';
 import { RegisterOrganization } from '@modules/organizations/application/use-cases/register-organization.use-case';
 import type {
@@ -39,6 +41,11 @@ const LIST_LIMIT = 200;
 /** Detalle de organización más los flags de funcionalidad que gobierna la plataforma. */
 export interface AdminOrgDetailWithFeatures extends AdminOrgDetail {
   features: OrganizationFeatures;
+  /**
+   * Aceptación de los Términos y Condiciones, con el email de quien aceptó
+   * resuelto: el `userId` suelto no le sirve a nadie mirando el panel.
+   */
+  terms: TermsStatus & { acceptedByEmail: string | null };
 }
 
 /** Alta de un negocio, con la elección comercial con la que arranca. */
@@ -70,6 +77,7 @@ export class SuperAdminService {
     private readonly registerOrganization: RegisterOrganization,
     private readonly grantSubscription: GrantSubscription,
     private readonly features: OrganizationFeaturesService,
+    private readonly terms: TermsService,
     @Inject(CLOCK) private readonly clock: Clock,
     private readonly logger: Logger,
   ) {}
@@ -79,12 +87,22 @@ export class SuperAdminService {
   }
 
   async getOrganizationDetail(id: string): Promise<AdminOrgDetailWithFeatures> {
-    const [detail, features] = await Promise.all([
+    const [detail, features, terms] = await Promise.all([
       this.read.getOrganizationDetail(id),
       this.features.get(id),
+      this.terms.getStatus(id),
     ]);
     if (!detail) throw new NotFoundError('Organización no encontrada');
-    return { ...detail, features };
+    // El usuario que aceptó puede haber sido dado de baja después; en ese caso
+    // el email queda en null y la fecha de aceptación sigue siendo válida.
+    const acceptedBy = terms.acceptedByUserId
+      ? await this.users.findById(id, terms.acceptedByUserId)
+      : null;
+    return {
+      ...detail,
+      features,
+      terms: { ...terms, acceptedByEmail: acceptedBy?.email ?? null },
+    };
   }
 
   getMetrics(): Promise<AdminMetrics> {

@@ -1,6 +1,6 @@
 {
   "name": "agendox-api",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "Agendox backend - Modular Monolith (NestJS + Clean Architecture + DDD) for a multi-tenant booking SaaS",
   "author": "Agendox",
   "private": true,

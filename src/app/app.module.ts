@@ -15,6 +15,7 @@ import { AuthenticationModule } from '@modules/authentication/authentication.mod
 import { AvailabilityModule } from '@modules/availability/availability.module';
 import { ClientsModule } from '@modules/clients/clients.module';
 import { CustomerPortalModule } from '@modules/customer-portal/customer-portal.module';
+import { LegalModule } from '@modules/legal/legal.module';
 import { NotificationsModule } from '@modules/notifications/notifications.module';
 import { OrganizationsModule } from '@modules/organizations/organizations.module';
 import { PlansModule } from '@modules/plans/plans.module';
@@ -71,6 +72,8 @@ import { UsersModule } from '@modules/users/users.module';
     SubscriptionsModule,
     // Platform super admin (MS5).
     SuperAdminModule,
+    // Aceptación de Términos y Condiciones.
+    LegalModule,
   ],
   providers: [
     {

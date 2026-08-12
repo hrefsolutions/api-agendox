@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 
 import { AuthenticationModule } from '@modules/authentication/authentication.module';
+import { LegalModule } from '@modules/legal/legal.module';
 import { OrganizationsModule } from '@modules/organizations/organizations.module';
 import { PlansModule } from '@modules/plans/plans.module';
 import { SubscriptionsModule } from '@modules/subscriptions/subscriptions.module';
@@ -31,6 +32,7 @@ import { SuperAdminGuard } from './interface/http/super-admin.guard';
     UsersModule,
     SubscriptionsModule,
     PlansModule,
+    LegalModule,
     JwtModule.register({}),
   ],
   controllers: [SuperAdminController],

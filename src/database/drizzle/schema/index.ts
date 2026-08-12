@@ -32,3 +32,5 @@ export * from '../../../modules/plans/infrastructure/persistence/plan.schema';
 export * from '../../../modules/subscriptions/infrastructure/persistence/subscription.schema';
 // Super admin (platform-global; MS5).
 export * from '../../../modules/super-admin/infrastructure/persistence/super-admin.schema';
+// Aceptación de Términos y Condiciones por organización.
+export * from '../../../modules/legal/infrastructure/persistence/terms-acceptance.schema';

@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 
 import { AuthenticationModule } from '@modules/authentication/authentication.module';
+import { LegalModule } from '@modules/legal/legal.module';
 import { SettingsModule } from '@modules/settings/settings.module';
 import { TrialsModule } from '@modules/trials/trials.module';
 import { UsersModule } from '@modules/users/users.module';
@@ -22,7 +23,7 @@ import { DrizzleOrganizationRepository } from './infrastructure/persistence/driz
  * super-admin, que es el único autorizado a dar de alta un negocio.
  */
 @Module({
-  imports: [UsersModule, TrialsModule, AuthenticationModule, SettingsModule],
+  imports: [UsersModule, TrialsModule, AuthenticationModule, SettingsModule, LegalModule],
   controllers: [OrganizationsController],
   providers: [
     { provide: ORGANIZATION_REPOSITORY, useClass: DrizzleOrganizationRepository },

@@ -1,5 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 
+import { TermsService } from '@modules/legal/application/terms.service';
 import { NotFoundError } from '@shared/errors';
 
 import {
@@ -15,12 +16,14 @@ export class GetCurrentOrganization {
   constructor(
     @Inject(ORGANIZATION_REPOSITORY) private readonly organizations: OrganizationRepository,
     private readonly features: OrganizationFeaturesService,
+    private readonly terms: TermsService,
   ) {}
 
   async execute(organizationId: string): Promise<OrganizationView> {
-    const [organization, features] = await Promise.all([
+    const [organization, features, terms] = await Promise.all([
       this.organizations.findById(organizationId),
       this.features.get(organizationId),
+      this.terms.getStatus(organizationId),
     ]);
     if (!organization) {
       throw new NotFoundError('Organización no encontrada');
@@ -33,6 +36,7 @@ export class GetCurrentOrganization {
       timezone: organization.timezone,
       createdAt: organization.createdAt,
       features,
+      terms,
     };
   }
 }

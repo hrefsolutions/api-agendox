@@ -18,4 +18,11 @@ describe('Slug', () => {
   it('rejects a slug longer than 63 chars', () => {
     expect(() => Slug.create('a'.repeat(64))).toThrow(ValidationError);
   });
+
+  it.each(['legal', 'api', 'PORTAL', ' admin '])(
+    'rejects the reserved slug %p',
+    (raw) => {
+      expect(() => Slug.create(raw)).toThrow(ValidationError);
+    },
+  );
 });

@@ -17,6 +17,15 @@ export class OrganizationFeaturesResponse {
   subscriptionsEnabled!: boolean;
 }
 
+export class OrganizationTermsResponse {
+  @ApiProperty({ example: '2026-08-12' }) currentVersion!: string;
+  @ApiProperty({ nullable: true }) acceptedVersion!: string | null;
+  @ApiProperty({ nullable: true, type: String, format: 'date-time' })
+  acceptedAt!: Date | null;
+  @ApiProperty({ nullable: true }) acceptedByUserId!: string | null;
+  @ApiProperty() requiresAcceptance!: boolean;
+}
+
 export class OrganizationResponse {
   @ApiProperty() id!: string;
   @ApiProperty() name!: string;
@@ -26,4 +35,7 @@ export class OrganizationResponse {
   @ApiProperty() createdAt!: Date;
   @ApiProperty({ type: OrganizationFeaturesResponse })
   features!: OrganizationFeaturesResponse;
+
+  @ApiProperty({ type: OrganizationTermsResponse })
+  terms!: OrganizationTermsResponse;
 }
