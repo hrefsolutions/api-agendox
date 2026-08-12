@@ -23,6 +23,12 @@ import {
   type GrantedSubscriptionView,
 } from '@modules/subscriptions/application/grant-subscription.use-case';
 import {
+  UsersService,
+  type CreatedUserView,
+  type UserView,
+} from '@modules/users/application/users.service';
+import type { UserStatus } from '@modules/users/domain/user-status.enum';
+import {
   USER_REPOSITORY,
   type UserRepository,
 } from '@modules/users/domain/repositories/user.repository';
@@ -74,6 +80,7 @@ export class SuperAdminService {
     @Inject(ADMIN_READ_REPOSITORY) private readonly read: AdminReadRepository,
     @Inject(ORGANIZATION_REPOSITORY) private readonly organizations: OrganizationRepository,
     @Inject(USER_REPOSITORY) private readonly users: UserRepository,
+    private readonly staff: UsersService,
     private readonly registerOrganization: RegisterOrganization,
     private readonly grantSubscription: GrantSubscription,
     private readonly features: OrganizationFeaturesService,
@@ -176,6 +183,65 @@ export class SuperAdminService {
     await this.users.save(owner);
     this.audit(actingSuperAdminId, 'update-owner-email', organizationId);
     return { ownerEmail: normalized };
+  }
+
+  /**
+   * Staff del negocio. El alta y la baja de recepcionistas vive en la plataforma
+   * y no en el panel del negocio (decisión de producto): el dueño ve su equipo
+   * pero no lo administra.
+   */
+  async listUsers(organizationId: string): Promise<UserView[]> {
+    await this.requireOrganization(organizationId);
+    return this.staff.list(organizationId);
+  }
+
+  /**
+   * Alta de recepcionista. El rol se fija acá y **no** llega por el body: así la
+   * API de plataforma no puede fabricar un Owner ni un Admin aunque alguien
+   * manipule el request. La contraseña temporal se devuelve una sola vez.
+   */
+  async createReceptionist(
+    organizationId: string,
+    input: { firstName: string; lastName: string; email: string },
+    actingSuperAdminId: string,
+  ): Promise<CreatedUserView> {
+    await this.requireOrganization(organizationId);
+    const created = await this.staff.create(organizationId, {
+      ...input,
+      role: Role.Receptionist,
+    });
+    this.audit(actingSuperAdminId, 'create-user', organizationId);
+    return created;
+  }
+
+  async updateUser(
+    organizationId: string,
+    userId: string,
+    changes: { firstName?: string; lastName?: string; status?: UserStatus },
+    actingSuperAdminId: string,
+  ): Promise<UserView> {
+    await this.requireOrganization(organizationId);
+    // `role` no se propaga a propósito: el único rol que esta vía crea es
+    // Receptionist, y cambiarlo desde acá sería una escalada silenciosa.
+    const updated = await this.staff.update(organizationId, userId, changes);
+    this.audit(actingSuperAdminId, 'update-user', organizationId);
+    return updated;
+  }
+
+  async resetUserPassword(
+    organizationId: string,
+    userId: string,
+    actingSuperAdminId: string,
+  ): Promise<{ temporaryPassword: string }> {
+    await this.requireOrganization(organizationId);
+    const result = await this.staff.resetPassword(organizationId, userId);
+    this.audit(actingSuperAdminId, 'reset-user-password', organizationId);
+    return result;
+  }
+
+  private async requireOrganization(id: string): Promise<void> {
+    const org = await this.organizations.findById(id);
+    if (!org) throw new NotFoundError('Organización no encontrada');
   }
 
   async updateOrganization(

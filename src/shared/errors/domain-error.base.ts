@@ -52,3 +52,17 @@ export class ForbiddenError extends DomainError {
 export class BusinessRuleError extends DomainError {
   readonly code = 'BUSINESS_RULE_VIOLATION';
 }
+
+/**
+ * The caller exceeded an application-level quota (distinct from the global
+ * per-IP throttler, which lives in the transport layer). `details.retryAfterSeconds`
+ * tells the client how long to wait, so the UI can show a real countdown instead
+ * of a generic error.
+ */
+export class RateLimitError extends DomainError {
+  readonly code = 'RATE_LIMITED';
+
+  constructor(message: string, readonly retryAfterSeconds: number) {
+    super(message, { retryAfterSeconds });
+  }
+}

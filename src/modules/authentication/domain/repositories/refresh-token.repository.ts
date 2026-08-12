@@ -14,6 +14,11 @@ export interface RefreshTokenRepository {
   save(record: RefreshTokenRecord): Promise<void>;
   findByJti(jti: string): Promise<RefreshTokenRecord | null>;
   revoke(jti: string, at: Date): Promise<void>;
+  /**
+   * Revokes every live refresh token of a user. Used when the password changes:
+   * a rotated credential has to close the sessions opened with the old one.
+   */
+  revokeAllForUser(userId: string, at: Date): Promise<void>;
 }
 
 export const REFRESH_TOKEN_REPOSITORY = Symbol('REFRESH_TOKEN_REPOSITORY');

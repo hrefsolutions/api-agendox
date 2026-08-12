@@ -23,13 +23,16 @@ import {
   type CreateOrganizationResult,
 } from '../../application/super-admin.service';
 import type { AdminMetrics, AdminOrgListItem } from '../../application/ports/admin-read.repository';
+import type { CreatedUserView, UserView } from '@modules/users/application/users.service';
 import { CurrentSuperAdmin } from './current-super-admin.decorator';
 import { SuperAdminGuard, type SuperAdminPrincipal } from './super-admin.guard';
 import {
   CreateOrganizationRequest,
+  CreateOrganizationUserRequest,
   SuperAdminLoginRequest,
   UpdateOrganizationFeaturesRequest,
   UpdateOrganizationRequest,
+  UpdateOrganizationUserRequest,
   UpdateOwnerEmailRequest,
 } from './super-admin.requests';
 
@@ -147,6 +150,53 @@ export class SuperAdminController {
     @CurrentSuperAdmin() admin: SuperAdminPrincipal,
   ): Promise<{ ownerEmail: string }> {
     return this.service.updateOwnerEmail(id, body.email, admin.superAdminId);
+  }
+
+  /**
+   * Staff del negocio. Vive acá y no en `/users` porque el super admin tiene su
+   * propio token y guard: no puede atravesar el guard de staff, que además saca
+   * el tenant del principal.
+   */
+  @Get('organizations/:id/users')
+  @ApiBearerAuth()
+  @UseGuards(SuperAdminGuard)
+  listUsers(@Param('id') id: string): Promise<UserView[]> {
+    return this.service.listUsers(id);
+  }
+
+  /** Alta de recepcionista. Devuelve la contraseña temporal una sola vez. */
+  @Post('organizations/:id/users')
+  @ApiBearerAuth()
+  @UseGuards(SuperAdminGuard)
+  createUser(
+    @Param('id') id: string,
+    @Body() body: CreateOrganizationUserRequest,
+    @CurrentSuperAdmin() admin: SuperAdminPrincipal,
+  ): Promise<CreatedUserView> {
+    return this.service.createReceptionist(id, body, admin.superAdminId);
+  }
+
+  @Patch('organizations/:id/users/:userId')
+  @ApiBearerAuth()
+  @UseGuards(SuperAdminGuard)
+  updateUser(
+    @Param('id') id: string,
+    @Param('userId') userId: string,
+    @Body() body: UpdateOrganizationUserRequest,
+    @CurrentSuperAdmin() admin: SuperAdminPrincipal,
+  ): Promise<UserView> {
+    return this.service.updateUser(id, userId, body, admin.superAdminId);
+  }
+
+  @Post('organizations/:id/users/:userId/reset-password')
+  @ApiBearerAuth()
+  @UseGuards(SuperAdminGuard)
+  resetUserPassword(
+    @Param('id') id: string,
+    @Param('userId') userId: string,
+    @CurrentSuperAdmin() admin: SuperAdminPrincipal,
+  ): Promise<{ temporaryPassword: string }> {
+    return this.service.resetUserPassword(id, userId, admin.superAdminId);
   }
 
   @Patch('organizations/:id/features')

@@ -5,6 +5,7 @@ import { ConfigService } from '@nestjs/config';
 
 import type { AuthConfig } from '@config/configuration';
 import { CLOCK, type Clock } from '@shared/application';
+import { RateLimitError } from '@shared/errors';
 
 import {
   PASSWORD_HASHER,
@@ -25,13 +26,31 @@ import {
 } from '../domain/customer-otp.repository';
 
 /**
+ * Espera obligatoria antes de cada reenvío, en segundos. El índice es la
+ * cantidad de códigos ya emitidos en la ventana: el primer reenvío espera 30 s,
+ * el segundo 60 s, y así. La escala es lineal y no exponencial a propósito —
+ * esto corre en el medio de una reserva, y hacer esperar ocho minutos hace
+ * abandonar la compra.
+ */
+const RESEND_DELAYS_SECONDS = [30, 60, 90, 120, 150];
+
+/** Envío inicial + los reenvíos de la escala. */
+const MAX_SENDS_PER_WINDOW = 1 + RESEND_DELAYS_SECONDS.length;
+
+/**
  * Emails a one-time code to a customer for a public organization (by slug).
  * Anti-enumeration: always succeeds silently, revealing nothing about whether
  * the organization or the email exist.
+ *
+ * El tope de reenvíos vive acá y no solo en el front: un contador en React se
+ * evade recargando la página. El `@Throttle` del controller es complementario —
+ * ese limita por IP (y castiga a todos los que comparten NAT), este por
+ * (organización, email), que es lo que de verdad se quiere acotar.
  */
 @Injectable()
 export class RequestCustomerOtp {
   private readonly ttlMinutes: number;
+  private readonly resendWindowMinutes: number;
 
   constructor(
     @Inject(ORGANIZATION_REPOSITORY) private readonly organizations: OrganizationRepository,
@@ -41,7 +60,9 @@ export class RequestCustomerOtp {
     @Inject(CLOCK) private readonly clock: Clock,
     configService: ConfigService,
   ) {
-    this.ttlMinutes = configService.getOrThrow<AuthConfig>('auth').otpTtlMinutes;
+    const auth = configService.getOrThrow<AuthConfig>('auth');
+    this.ttlMinutes = auth.otpTtlMinutes;
+    this.resendWindowMinutes = auth.otpResendWindowMinutes;
   }
 
   async execute(slug: string, email: string): Promise<void> {
@@ -50,14 +71,17 @@ export class RequestCustomerOtp {
       return;
     }
 
-    const code = String(randomInt(0, 1_000_000)).padStart(6, '0');
     const now = this.clock.now();
+    const normalizedEmail = email.trim().toLowerCase();
+    await this.assertCanSend(organization.id, normalizedEmail, now);
+
+    const code = String(randomInt(0, 1_000_000)).padStart(6, '0');
     const codeHash = await this.hasher.hash(code);
 
     await this.otps.save({
       id: randomUUID(),
       organizationId: organization.id,
-      email: email.trim().toLowerCase(),
+      email: normalizedEmail,
       codeHash,
       expiresAt: new Date(now.getTime() + this.ttlMinutes * 60 * 1000),
       attempts: 0,
@@ -66,7 +90,7 @@ export class RequestCustomerOtp {
     });
 
     await this.email.send({
-      to: email.trim().toLowerCase(),
+      to: normalizedEmail,
       subject: `${organization.name} — tu código de acceso`,
       template: 'otp',
       vars: {
@@ -76,4 +100,54 @@ export class RequestCustomerOtp {
       },
     });
   }
+
+  /**
+   * Corta el pedido con 429 si el email agotó los envíos de la ventana o si
+   * todavía no cumplió la espera del reenvío que le toca.
+   *
+   * No filtra información: el conteo es por email pedido, exista o no un cliente
+   * con esa dirección, así que la respuesta es idéntica para un email real y
+   * para uno inventado.
+   */
+  private async assertCanSend(
+    organizationId: string,
+    email: string,
+    now: Date,
+  ): Promise<void> {
+    const windowMs = this.resendWindowMinutes * 60 * 1000;
+    const since = new Date(now.getTime() - windowMs);
+    const sent = await this.otps.countSince(organizationId, email, since);
+
+    if (sent >= MAX_SENDS_PER_WINDOW) {
+      // La ventana es deslizante: el cupo se libera cuando el código MÁS VIEJO
+      // sale de ella, no cuando envejece el último.
+      const oldest = await this.otps.findOldestSince(organizationId, email, since);
+      const retryAfterSeconds = oldest
+        ? secondsUntil(new Date(oldest.createdAt.getTime() + windowMs), now)
+        : this.resendWindowMinutes * 60;
+      throw new RateLimitError(
+        'Alcanzaste el límite de reenvíos. Probá de nuevo más tarde.',
+        retryAfterSeconds,
+      );
+    }
+
+    if (sent === 0) return;
+
+    const latest = await this.otps.findLatest(organizationId, email);
+    if (!latest) return;
+
+    const delaySeconds = RESEND_DELAYS_SECONDS[sent - 1] ?? RESEND_DELAYS_SECONDS.at(-1)!;
+    const readyAt = new Date(latest.createdAt.getTime() + delaySeconds * 1000);
+    const wait = secondsUntil(readyAt, now);
+    if (wait > 0) {
+      throw new RateLimitError(
+        `Esperá ${wait} segundos antes de pedir otro código.`,
+        wait,
+      );
+    }
+  }
+}
+
+function secondsUntil(target: Date, now: Date): number {
+  return Math.max(1, Math.ceil((target.getTime() - now.getTime()) / 1000));
 }

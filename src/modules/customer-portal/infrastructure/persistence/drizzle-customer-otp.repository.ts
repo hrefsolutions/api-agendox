@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { and, desc, eq, isNull, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, gte, isNull, sql } from 'drizzle-orm';
 
 import { DRIZZLE, type Database } from '@database/database.constants';
 import { BaseDrizzleRepository } from '@database/drizzle/base.repository';
@@ -35,6 +35,52 @@ export class DrizzleCustomerOtpRepository
         ),
       )
       .orderBy(desc(customerOtps.createdAt))
+      .limit(1);
+    return rows[0] ?? null;
+  }
+
+  async findLatest(organizationId: string, email: string): Promise<CustomerOtpRecord | null> {
+    const rows = await this.executor
+      .select()
+      .from(customerOtps)
+      .where(
+        and(
+          eq(customerOtps.organizationId, organizationId),
+          eq(customerOtps.email, email.trim().toLowerCase()),
+        ),
+      )
+      .orderBy(desc(customerOtps.createdAt))
+      .limit(1);
+    return rows[0] ?? null;
+  }
+
+  async countSince(organizationId: string, email: string, since: Date): Promise<number> {
+    return this.executor.$count(
+      customerOtps,
+      and(
+        eq(customerOtps.organizationId, organizationId),
+        eq(customerOtps.email, email.trim().toLowerCase()),
+        gte(customerOtps.createdAt, since),
+      ),
+    );
+  }
+
+  async findOldestSince(
+    organizationId: string,
+    email: string,
+    since: Date,
+  ): Promise<CustomerOtpRecord | null> {
+    const rows = await this.executor
+      .select()
+      .from(customerOtps)
+      .where(
+        and(
+          eq(customerOtps.organizationId, organizationId),
+          eq(customerOtps.email, email.trim().toLowerCase()),
+          gte(customerOtps.createdAt, since),
+        ),
+      )
+      .orderBy(asc(customerOtps.createdAt))
       .limit(1);
     return rows[0] ?? null;
   }

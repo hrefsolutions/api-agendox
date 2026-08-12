@@ -9,6 +9,7 @@ import {
   DomainError,
   ForbiddenError,
   NotFoundError,
+  RateLimitError,
   UnauthorizedError,
   ValidationError,
 } from '@shared/errors';
@@ -174,6 +175,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
     if (error instanceof UnauthorizedError) return HttpStatus.UNAUTHORIZED;
     if (error instanceof ForbiddenError) return HttpStatus.FORBIDDEN;
     if (error instanceof BusinessRuleError) return HttpStatus.UNPROCESSABLE_ENTITY;
+    if (error instanceof RateLimitError) return HttpStatus.TOO_MANY_REQUESTS;
     return HttpStatus.BAD_REQUEST;
   }
 

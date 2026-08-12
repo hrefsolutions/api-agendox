@@ -7,6 +7,7 @@ import { RoleGuard } from '@common/guards/role.guard';
 
 import { UsersModule } from '@modules/users/users.module';
 
+import { ChangePassword } from './application/use-cases/change-password.use-case';
 import { LoginStaff } from './application/use-cases/login-staff.use-case';
 import { LogoutStaff } from './application/use-cases/logout-staff.use-case';
 import { RefreshSession } from './application/use-cases/refresh-session.use-case';
@@ -33,6 +34,7 @@ import { TokenService } from './infrastructure/providers/token.service';
     LoginStaff,
     RefreshSession,
     LogoutStaff,
+    ChangePassword,
     { provide: APP_GUARD, useClass: AuthGuard },
     { provide: APP_GUARD, useClass: RoleGuard },
   ],

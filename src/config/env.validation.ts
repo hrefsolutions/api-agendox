@@ -182,6 +182,14 @@ export class EnvironmentVariables {
   @Max(20)
   OTP_MAX_ATTEMPTS = 5;
 
+  /** Window in which OTP sends to the same (organization, email) are counted. */
+  @IsOptional()
+  @Transform(toNumber)
+  @IsInt()
+  @Min(5)
+  @Max(1440)
+  OTP_RESEND_WINDOW_MINUTES = 60;
+
   /** Sentry DSN for error reporting. Empty/unset disables Sentry (no-op). */
   @IsOptional()
   @IsString()

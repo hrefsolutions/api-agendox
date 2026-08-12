@@ -15,6 +15,8 @@ import {
   ValidateNested,
 } from 'class-validator';
 
+import { UserStatus } from '@modules/users/domain/user-status.enum';
+
 /**
  * Con qué arranca comercialmente un negocio nuevo.
  *
@@ -114,6 +116,41 @@ export class UpdateOrganizationRequest {
   @IsString()
   @IsNotEmpty()
   timezone?: string;
+}
+
+/**
+ * Alta de un recepcionista. **No lleva rol**: lo fija el servidor
+ * (`Role.Receptionist`), así la API de plataforma no puede crear un Owner ni un
+ * Admin. Tampoco lleva contraseña: se genera y se devuelve una sola vez.
+ */
+export class CreateOrganizationUserRequest {
+  @ApiProperty({ example: 'recepcion@negocio.com' })
+  @IsEmail()
+  email!: string;
+
+  @ApiProperty() @IsString() @IsNotEmpty() @MaxLength(80) firstName!: string;
+  @ApiProperty() @IsString() @IsNotEmpty() @MaxLength(80) lastName!: string;
+}
+
+export class UpdateOrganizationUserRequest {
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(80)
+  firstName?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(80)
+  lastName?: string;
+
+  @ApiPropertyOptional({ enum: UserStatus })
+  @IsOptional()
+  @IsEnum(UserStatus)
+  status?: UserStatus;
 }
 
 /**

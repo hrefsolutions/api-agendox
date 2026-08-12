@@ -50,6 +50,8 @@ export const authConfig = registerAs('auth', () => ({
   customerTtl: process.env.JWT_CUSTOMER_TTL ?? '30m',
   otpTtlMinutes: toInt(process.env.OTP_TTL_MINUTES, 10),
   otpMaxAttempts: toInt(process.env.OTP_MAX_ATTEMPTS, 5),
+  /** Ventana en la que se cuentan los códigos emitidos a un mismo email. */
+  otpResendWindowMinutes: toInt(process.env.OTP_RESEND_WINDOW_MINUTES, 60),
   superAdminSecret: process.env.JWT_SUPERADMIN_SECRET ?? '',
   superAdminTtl: process.env.JWT_SUPERADMIN_TTL ?? '8h',
 }));

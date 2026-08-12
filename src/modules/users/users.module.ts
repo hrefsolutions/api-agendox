@@ -25,6 +25,10 @@ import { UsersController } from './interface/http/users.controller';
     { provide: PASSWORD_HASHER, useClass: Argon2PasswordHasher },
     UsersService,
   ],
-  exports: [USER_REPOSITORY],
+  // `UsersService` se exporta para el super admin: el alta de recepcionistas vive
+  // en `/admin/*`, que tiene otro guard y otro token, así que no puede consumir
+  // `UsersController` — pero sí reusar el servicio, que recibe el
+  // `organizationId` por parámetro.
+  exports: [USER_REPOSITORY, UsersService],
 })
 export class UsersModule {}

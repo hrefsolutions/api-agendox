@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { eq } from 'drizzle-orm';
+import { and, eq, isNull } from 'drizzle-orm';
 
 import { DRIZZLE, type Database } from '@database/database.constants';
 import { BaseDrizzleRepository } from '@database/drizzle/base.repository';
@@ -37,5 +37,14 @@ export class DrizzleRefreshTokenRepository
       .update(refreshTokens)
       .set({ revokedAt: at })
       .where(eq(refreshTokens.jti, jti));
+  }
+
+  async revokeAllForUser(userId: string, at: Date): Promise<void> {
+    // Solo los vivos: pisar `revoked_at` de los ya revocados falsearía cuándo se
+    // cerró cada sesión.
+    await this.executor
+      .update(refreshTokens)
+      .set({ revokedAt: at })
+      .where(and(eq(refreshTokens.userId, userId), isNull(refreshTokens.revokedAt)));
   }
 }
