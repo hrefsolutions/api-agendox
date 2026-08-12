@@ -91,6 +91,20 @@ const STAFF = [
   },
 ] as const;
 
+/** `undefined_column` de Postgres: el código pide una columna que la base no tiene. */
+const PG_UNDEFINED_COLUMN = '42703';
+
+/**
+ * Detecta el caso "falta correr la migración". Drizzle envuelve el error de `pg`
+ * en un `DrizzleQueryError`, así que el código real vive en `cause`.
+ */
+function isMissingColumn(error: unknown): boolean {
+  const causes = [error, (error as { cause?: unknown })?.cause];
+  return causes.some(
+    (candidate) => (candidate as { code?: string } | undefined)?.code === PG_UNDEFINED_COLUMN,
+  );
+}
+
 async function seedDemo(): Promise<void> {
   const app = await NestFactory.createApplicationContext(AppModule, { bufferLogs: true });
   app.useLogger(app.get(Logger));
@@ -189,6 +203,20 @@ async function seedDemo(): Promise<void> {
       `Demo lista para "${slug}": ${CATALOG.length} servicios, ` +
         `${CATALOG.reduce((n, c) => n + c.options.length, 0)} opciones y ${STAFF.length} recursos.`,
     );
+  } catch (error) {
+    // El caso típico: se corre el seed antes de migrar. Sin este mensaje, lo que
+    // se ve es un stack trace de Drizzle que no dice qué hacer.
+    if (isMissingColumn(error)) {
+      logger.error(
+        'La base no tiene todavía las columnas que este seed necesita ' +
+          '(`service_options.name` / `appointments.service_option_name`). ' +
+          'Corré la migración primero: ver docs/deploy/migracion-nombre-de-opcion.md ' +
+          '(`pnpm db:generate` → editar el SQL generado → `pnpm db:migrate`).',
+      );
+      process.exitCode = 1;
+      return;
+    }
+    throw error;
   } finally {
     await app.close();
   }
