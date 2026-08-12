@@ -3,9 +3,12 @@ import { randomUUID } from 'node:crypto';
 import { AggregateRoot, Money } from '@shared/domain';
 import { ValidationError } from '@shared/errors';
 
+const NAME_MAX_LENGTH = 80;
+
 interface ServiceOptionProps {
   organizationId: string;
   serviceId: string;
+  name: string;
   durationMinutes: number;
   price: Money;
   active: boolean;
@@ -13,7 +16,13 @@ interface ServiceOptionProps {
   updatedAt: Date;
 }
 
-/** A reservable variant of a service: duration + price (BR-060). */
+/**
+ * A reservable variant of a service: name + duration + price (BR-060).
+ *
+ * El nombre es obligatorio porque es lo único que le dice al cliente **qué**
+ * está reservando: sin él, el portal público solo puede ofrecer "30 min ·
+ * $5.000", que no identifica nada.
+ */
 export class ServiceOption extends AggregateRoot {
   private constructor(
     id: string,
@@ -25,14 +34,17 @@ export class ServiceOption extends AggregateRoot {
   static create(input: {
     organizationId: string;
     serviceId: string;
+    name: string;
     durationMinutes: number;
     price: Money;
     now: Date;
   }): ServiceOption {
     ServiceOption.assertDuration(input.durationMinutes);
+    const name = ServiceOption.normalizeName(input.name);
     return new ServiceOption(randomUUID(), {
       organizationId: input.organizationId,
       serviceId: input.serviceId,
+      name,
       durationMinutes: input.durationMinutes,
       price: input.price,
       active: true,
@@ -45,7 +57,13 @@ export class ServiceOption extends AggregateRoot {
     return new ServiceOption(id, props);
   }
 
-  update(patch: { durationMinutes?: number; price?: Money; active?: boolean }, now: Date): void {
+  update(
+    patch: { name?: string; durationMinutes?: number; price?: Money; active?: boolean },
+    now: Date,
+  ): void {
+    if (patch.name !== undefined) {
+      this.props.name = ServiceOption.normalizeName(patch.name);
+    }
     if (patch.durationMinutes !== undefined) {
       ServiceOption.assertDuration(patch.durationMinutes);
       this.props.durationMinutes = patch.durationMinutes;
@@ -61,11 +79,32 @@ export class ServiceOption extends AggregateRoot {
     }
   }
 
+  /**
+   * Renombrar una opción **no** toca los turnos ya creados: el nombre viaja al
+   * snapshot del `Appointment` en el momento de la reserva.
+   */
+  private static normalizeName(value: string): string {
+    const name = value.trim();
+    if (!name) {
+      throw new ValidationError('La opción necesita un nombre');
+    }
+    if (name.length > NAME_MAX_LENGTH) {
+      throw new ValidationError(
+        `El nombre de la opción no puede superar los ${NAME_MAX_LENGTH} caracteres`,
+        { length: name.length },
+      );
+    }
+    return name;
+  }
+
   get organizationId(): string {
     return this.props.organizationId;
   }
   get serviceId(): string {
     return this.props.serviceId;
+  }
+  get name(): string {
+    return this.props.name;
   }
   get durationMinutes(): number {
     return this.props.durationMinutes;

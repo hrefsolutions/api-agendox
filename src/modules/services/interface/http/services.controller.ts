@@ -64,6 +64,7 @@ export class ServicesController {
     @Body() body: CreateServiceOptionRequest,
   ): Promise<ServiceOptionView> {
     return this.services.createOption(organizationId, serviceId, {
+      name: body.name,
       durationMinutes: body.durationMinutes,
       price: body.price,
     });

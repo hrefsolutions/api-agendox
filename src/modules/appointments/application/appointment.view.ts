@@ -7,6 +7,7 @@ export interface AppointmentView {
   serviceId: string;
   serviceName: string;
   serviceOptionId: string;
+  serviceOptionName: string;
   durationMinutes: number;
   servicePrice: number;
   resourceId: string;
@@ -32,6 +33,7 @@ export function toAppointmentView(appointment: Appointment): AppointmentView {
     serviceId: s.serviceId,
     serviceName: s.serviceName,
     serviceOptionId: s.serviceOptionId,
+    serviceOptionName: s.serviceOptionName,
     durationMinutes: s.durationMinutes,
     servicePrice: s.servicePrice.toNumber(),
     resourceId: s.resourceId,

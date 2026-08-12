@@ -44,6 +44,8 @@ export interface PublicOrganizationView {
 
 export interface PublicServiceOptionView {
   id: string;
+  /** Qué es la opción. Es lo único que le dice al cliente qué está reservando. */
+  name: string;
   durationMinutes: number;
   price: number;
 }
@@ -112,6 +114,7 @@ export class PublicService {
         description: service.description,
         options: options.map((option) => ({
           id: option.id,
+          name: option.name,
           durationMinutes: option.durationMinutes,
           price: option.price.toNumber(),
         })),

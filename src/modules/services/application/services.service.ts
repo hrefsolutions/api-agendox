@@ -18,6 +18,7 @@ import {
 export interface ServiceOptionView {
   id: string;
   serviceId: string;
+  name: string;
   durationMinutes: number;
   price: number;
   active: boolean;
@@ -76,12 +77,13 @@ export class ServicesService {
   async createOption(
     organizationId: string,
     serviceId: string,
-    input: { durationMinutes: number; price: number },
+    input: { name: string; durationMinutes: number; price: number },
   ): Promise<ServiceOptionView> {
     await this.requireService(organizationId, serviceId);
     const option = ServiceOption.create({
       organizationId,
       serviceId,
+      name: input.name,
       durationMinutes: input.durationMinutes,
       price: Money.fromDecimalString(input.price.toFixed(2)),
       now: this.clock.now(),
@@ -93,7 +95,7 @@ export class ServicesService {
   async updateOption(
     organizationId: string,
     optionId: string,
-    patch: { durationMinutes?: number; price?: number; active?: boolean },
+    patch: { name?: string; durationMinutes?: number; price?: number; active?: boolean },
   ): Promise<ServiceOptionView> {
     const option = await this.options.findById(organizationId, optionId);
     if (!option) {
@@ -101,6 +103,7 @@ export class ServicesService {
     }
     option.update(
       {
+        name: patch.name,
         durationMinutes: patch.durationMinutes,
         price:
           patch.price === undefined ? undefined : Money.fromDecimalString(patch.price.toFixed(2)),
@@ -139,6 +142,7 @@ function toOptionView(option: ServiceOption): ServiceOptionView {
   return {
     id: option.id,
     serviceId: option.serviceId,
+    name: option.name,
     durationMinutes: option.durationMinutes,
     price: option.price.toNumber(),
     active: option.active,

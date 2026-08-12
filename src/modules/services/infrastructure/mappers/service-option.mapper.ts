@@ -8,6 +8,7 @@ export class ServiceOptionMapper {
     return ServiceOption.fromPersistence(row.id, {
       organizationId: row.organizationId,
       serviceId: row.serviceId,
+      name: row.name,
       durationMinutes: row.durationMinutes,
       price: Money.fromDecimalString(row.price),
       active: row.active,
@@ -21,6 +22,7 @@ export class ServiceOptionMapper {
       id: option.id,
       organizationId: option.organizationId,
       serviceId: option.serviceId,
+      name: option.name,
       durationMinutes: option.durationMinutes,
       price: option.price.toDecimalString(),
       active: option.active,

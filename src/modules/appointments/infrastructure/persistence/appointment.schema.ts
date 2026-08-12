@@ -35,6 +35,7 @@ export const appointments = pgTable(
     serviceId: uuid('service_id').notNull(),
     serviceName: text('service_name').notNull(),
     serviceOptionId: uuid('service_option_id').notNull(),
+    serviceOptionName: text('service_option_name').notNull(),
     durationMinutes: integer('duration_minutes').notNull(),
     servicePrice: numeric('service_price', { precision: 12, scale: 2 }).notNull(),
     resourceId: uuid('resource_id').notNull(),

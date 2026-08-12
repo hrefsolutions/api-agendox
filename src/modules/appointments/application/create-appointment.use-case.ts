@@ -207,6 +207,7 @@ export class CreateAppointment {
         serviceId: service.id,
         serviceName: service.name,
         serviceOptionId: option.id,
+        serviceOptionName: option.name,
         durationMinutes: option.durationMinutes,
         servicePrice: option.price,
         resourceId: resource.id,

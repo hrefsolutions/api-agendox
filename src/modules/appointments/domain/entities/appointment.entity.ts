@@ -19,6 +19,12 @@ interface AppointmentProps {
   serviceId: string;
   serviceName: string;
   serviceOptionId: string;
+  /**
+   * Nombre de la opción **al momento de reservar**. Se copia acá y no se lee de
+   * `service_options` a propósito: si el negocio renombra "Corte simple", los
+   * turnos ya creados tienen que seguir diciendo lo que el cliente contrató.
+   */
+  serviceOptionName: string;
   durationMinutes: number;
   servicePrice: Money;
   resourceId: string;

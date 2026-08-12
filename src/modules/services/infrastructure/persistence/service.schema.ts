@@ -35,6 +35,8 @@ export const serviceOptions = pgTable(
     id: uuid('id').primaryKey().defaultRandom(),
     organizationId: uuid('organization_id').notNull(),
     serviceId: uuid('service_id').notNull(),
+    /** Qué es la opción ("Corte simple"). Sin esto el cliente solo ve duración y precio. */
+    name: text('name').notNull(),
     durationMinutes: integer('duration_minutes').notNull(),
     price: numeric('price', { precision: 12, scale: 2 }).notNull(),
     active: boolean('active').notNull().default(true),
