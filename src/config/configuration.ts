@@ -58,7 +58,8 @@ export const authConfig = registerAs('auth', () => ({
   refreshSecret: process.env.JWT_REFRESH_SECRET ?? '',
   refreshTtl: process.env.JWT_REFRESH_TTL ?? '30d',
   customerSecret: process.env.JWT_CUSTOMER_SECRET ?? '',
-  customerTtl: process.env.JWT_CUSTOMER_TTL ?? '30m',
+  // Un día, alineado con la cookie del portal (ver env.validation.ts).
+  customerTtl: process.env.JWT_CUSTOMER_TTL ?? '24h',
   otpTtlMinutes: toInt(process.env.OTP_TTL_MINUTES, 10),
   otpMaxAttempts: toInt(process.env.OTP_MAX_ATTEMPTS, 5),
   /** Ventana en la que se cuentan los códigos emitidos a un mismo email. */

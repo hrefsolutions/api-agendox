@@ -151,10 +151,22 @@ export class EnvironmentVariables {
   @IsNotEmpty()
   JWT_CUSTOMER_SECRET!: string;
 
-  /** Customer session lifetime, as a `jsonwebtoken` duration (e.g. `30m`). */
+  /**
+   * Customer session lifetime, as a `jsonwebtoken` duration (e.g. `24h`).
+   *
+   * Un día: el cliente que reservó a la mañana entra a "Mis turnos" a la tarde
+   * sin pedir otro código. **Tiene que coincidir con el `maxAge` de la cookie del
+   * portal** (`booking/src/lib/customer/cookies.ts`): si la cookie dura más que
+   * el token, queda un tramo donde la sesión parece viva y la API rechaza todo.
+   *
+   * Este token **no es revocable**: cerrar sesión borra la cookie, pero el token
+   * sigue valiendo hasta que expira. Alargar esto alarga esa ventana. Lo que
+   * habilita es acotado —los turnos de ese cliente en ese negocio— y por eso el
+   * canje se considera aceptable acá y no en las sesiones de staff.
+   */
   @IsOptional()
   @IsString()
-  JWT_CUSTOMER_TTL = '30m';
+  JWT_CUSTOMER_TTL = '24h';
 
   /** Secret used to sign **super admin** (platform) JWTs. Distinct from all others. */
   @IsString()
