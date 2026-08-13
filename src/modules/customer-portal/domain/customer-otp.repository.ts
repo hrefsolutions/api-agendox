@@ -9,20 +9,25 @@ export interface CustomerOtpRecord {
   createdAt: Date;
 }
 
+/**
+ * Nota sobre el throttling de reenvíos: sólo cuentan los códigos **sin
+ * consumir**. Un código que la persona usó demuestra que el buzón es suyo, así
+ * que no es la señal de abuso que el tope busca frenar; contarlos hacía que
+ * entrar y salir un par de veces —o probar el flujo— dejara al cliente sin
+ * poder pedir otro código durante una hora.
+ */
 export interface CustomerOtpRepository {
   save(record: CustomerOtpRecord): Promise<void>;
-  /** Latest not-yet-consumed OTP for the (organization, email) pair. */
-  findLatestActive(organizationId: string, email: string): Promise<CustomerOtpRecord | null>;
   /**
-   * Latest OTP for the pair, consumed or not. Resend throttling has to look at
-   * every code issued, not only the ones still pending.
+   * Latest not-yet-consumed OTP for the (organization, email) pair. Es también
+   * el que manda en la espera entre reenvíos.
    */
-  findLatest(organizationId: string, email: string): Promise<CustomerOtpRecord | null>;
-  /** How many codes were issued to the pair since a point in time. */
+  findLatestActive(organizationId: string, email: string): Promise<CustomerOtpRecord | null>;
+  /** How many unconsumed codes were issued to the pair since a point in time. */
   countSince(organizationId: string, email: string, since: Date): Promise<number>;
   /**
-   * Oldest OTP still inside the throttling window. It is the one whose ageing
-   * out frees a slot, so it drives the "try again in…" hint.
+   * Oldest unconsumed OTP still inside the throttling window. It is the one
+   * whose ageing out frees a slot, so it drives the "try again in…" hint.
    */
   findOldestSince(
     organizationId: string,

@@ -109,7 +109,14 @@ export class AllExceptionsFilter implements ExceptionFilter {
       return {
         status,
         code: this.httpStatusToCode(status),
-        message,
+        // El rate limiter de Nest responde "ThrottlerException: Too many
+        // requests", que termina en un toast delante del cliente. Los 429 que
+        // nacen del dominio traen su propio texto (y su `retryAfterSeconds`):
+        // esto es solo para los del guard.
+        message:
+          status === HttpStatus.TOO_MANY_REQUESTS
+            ? 'Demasiados intentos seguidos. Esperá un minuto y probá de nuevo.'
+            : message,
       };
     }
 

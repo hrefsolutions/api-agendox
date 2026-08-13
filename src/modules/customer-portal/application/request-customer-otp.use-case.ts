@@ -105,6 +105,11 @@ export class RequestCustomerOtp {
    * Corta el pedido con 429 si el email agotó los envíos de la ventana o si
    * todavía no cumplió la espera del reenvío que le toca.
    *
+   * Sólo pesan los códigos **sin consumir**: quien usó su código demostró que el
+   * buzón es suyo y no es a quien el tope apunta. Contarlos hacía que entrar y
+   * salir un par de veces dejara al cliente una hora sin poder pedir otro
+   * código, que era el síntoma "no puedo reenviarme el código".
+   *
    * No filtra información: el conteo es por email pedido, exista o no un cliente
    * con esa dirección, así que la respuesta es idéntica para un email real y
    * para uno inventado.
@@ -133,7 +138,7 @@ export class RequestCustomerOtp {
 
     if (sent === 0) return;
 
-    const latest = await this.otps.findLatest(organizationId, email);
+    const latest = await this.otps.findLatestActive(organizationId, email);
     if (!latest) return;
 
     const delaySeconds = RESEND_DELAYS_SECONDS[sent - 1] ?? RESEND_DELAYS_SECONDS.at(-1)!;

@@ -3,10 +3,15 @@ import { ConfigService } from '@nestjs/config';
 import { APP_FILTER, APP_GUARD } from '@nestjs/core';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ScheduleModule } from '@nestjs/schedule';
-import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { LoggerModule } from 'nestjs-pino';
 
-import { AllExceptionsFilter, CommonModule, EventsModule } from '@common/index';
+import {
+  AllExceptionsFilter,
+  ClientIpThrottlerGuard,
+  CommonModule,
+  EventsModule,
+} from '@common/index';
 import { ConfigModule, createLoggerOptions } from '@config/index';
 import { DatabaseModule } from '@database/database.module';
 import { HealthModule } from '@health/health.module';
@@ -42,7 +47,9 @@ import { UsersModule } from '@modules/users/users.module';
     }),
     EventEmitterModule.forRoot(),
     ScheduleModule.forRoot(),
-    // Baseline rate limiting: 120 requests / minute per IP (tighter on auth/OTP).
+    // Baseline rate limiting: 120 requests / minute per client (tighter on
+    // auth/OTP). "Por cliente" y no "por IP de socket": ver
+    // `ClientIpThrottlerGuard`.
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 120 }]),
     DatabaseModule,
     CommonModule,
@@ -82,9 +89,10 @@ import { UsersModule } from '@modules/users/users.module';
       useClass: AllExceptionsFilter,
     },
     {
-      // Global rate limiter.
+      // Global rate limiter, contando por cliente real (x-forwarded-for) y no
+      // por la IP del BFF, que es la misma para todo el mundo.
       provide: APP_GUARD,
-      useClass: ThrottlerGuard,
+      useClass: ClientIpThrottlerGuard,
     },
   ],
 })

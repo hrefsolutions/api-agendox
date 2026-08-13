@@ -39,21 +39,6 @@ export class DrizzleCustomerOtpRepository
     return rows[0] ?? null;
   }
 
-  async findLatest(organizationId: string, email: string): Promise<CustomerOtpRecord | null> {
-    const rows = await this.executor
-      .select()
-      .from(customerOtps)
-      .where(
-        and(
-          eq(customerOtps.organizationId, organizationId),
-          eq(customerOtps.email, email.trim().toLowerCase()),
-        ),
-      )
-      .orderBy(desc(customerOtps.createdAt))
-      .limit(1);
-    return rows[0] ?? null;
-  }
-
   async countSince(organizationId: string, email: string, since: Date): Promise<number> {
     return this.executor.$count(
       customerOtps,
@@ -61,6 +46,8 @@ export class DrizzleCustomerOtpRepository
         eq(customerOtps.organizationId, organizationId),
         eq(customerOtps.email, email.trim().toLowerCase()),
         gte(customerOtps.createdAt, since),
+        // Los códigos ya usados no gastan cupo: ver la nota del repositorio.
+        isNull(customerOtps.consumedAt),
       ),
     );
   }
@@ -78,6 +65,7 @@ export class DrizzleCustomerOtpRepository
           eq(customerOtps.organizationId, organizationId),
           eq(customerOtps.email, email.trim().toLowerCase()),
           gte(customerOtps.createdAt, since),
+          isNull(customerOtps.consumedAt),
         ),
       )
       .orderBy(asc(customerOtps.createdAt))
