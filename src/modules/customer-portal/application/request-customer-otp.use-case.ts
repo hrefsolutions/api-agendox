@@ -128,7 +128,7 @@ export class RequestCustomerOtp {
       // sale de ella, no cuando envejece el último.
       const oldest = await this.otps.findOldestSince(organizationId, email, since);
       const retryAfterSeconds = oldest
-        ? secondsUntil(new Date(oldest.createdAt.getTime() + windowMs), now)
+        ? retryAfter(secondsUntil(new Date(oldest.createdAt.getTime() + windowMs), now))
         : this.resendWindowMinutes * 60;
       throw new RateLimitError(
         'Alcanzaste el límite de reenvíos. Probá de nuevo más tarde.',
@@ -146,13 +146,31 @@ export class RequestCustomerOtp {
     const wait = secondsUntil(readyAt, now);
     if (wait > 0) {
       throw new RateLimitError(
-        `Esperá ${wait} segundos antes de pedir otro código.`,
+        `Esperá ${plural(wait)} antes de pedir otro código.`,
         wait,
       );
     }
   }
 }
 
+/**
+ * Segundos que faltan para `target`. **Puede ser cero o negativo**: es lo que
+ * permite preguntar "¿ya pasó la espera?".
+ */
 function secondsUntil(target: Date, now: Date): number {
-  return Math.max(1, Math.ceil((target.getTime() - now.getTime()) / 1000));
+  return Math.ceil((target.getTime() - now.getTime()) / 1000);
+}
+
+/**
+ * El valor que se le informa al cliente, nunca cero: un `Retry-After: 0` no le
+ * dice nada a quien lo lee. Va sólo en la respuesta — usarlo para **decidir** si
+ * se puede enviar hacía que la espera no venciera nunca.
+ */
+function retryAfter(seconds: number): number {
+  return Math.max(1, seconds);
+}
+
+/** "1 segundo" y no "1 segundos". */
+function plural(seconds: number): string {
+  return seconds === 1 ? '1 segundo' : `${seconds} segundos`;
 }
