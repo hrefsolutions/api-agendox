@@ -282,7 +282,8 @@ export class EnvironmentVariables {
   PAYMENT_PROVIDER: PaymentProvider = PaymentProvider.Mock;
 
   /**
-   * Public base URL of the dashboard app, for the checkout return URL.
+   * Public base URL of the dashboard app: return URL del checkout y link de
+   * login que viaja en el mail de bienvenida del alta de un negocio.
    *
    * With `PAYMENT_PROVIDER=mercadopago` this must be a public HTTPS URL: Mercado
    * Pago rejects the `back_url` of a preapproval otherwise, and the failure

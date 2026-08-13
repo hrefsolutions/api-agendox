@@ -26,6 +26,11 @@ function toInt(value: string | undefined, fallback: number): number {
   return Number.isNaN(parsed) ? fallback : parsed;
 }
 
+/** Evita las URLs con doble barra al concatenar rutas (`https://app//login`). */
+function stripTrailingSlash(value: string): string {
+  return value.replace(/\/+$/, '');
+}
+
 export const appConfig = registerAs('app', () => ({
   nodeEnv: (process.env.NODE_ENV as NodeEnv | undefined) ?? NodeEnv.Development,
   isProduction: process.env.NODE_ENV === NodeEnv.Production,
@@ -33,6 +38,12 @@ export const appConfig = registerAs('app', () => ({
   apiPrefix: process.env.API_PREFIX ?? 'api',
   apiDefaultVersion: process.env.API_DEFAULT_VERSION ?? '1',
   corsOrigins: parseCorsOrigins(process.env.CORS_ORIGINS),
+  /**
+   * Public base URL of the dashboard app. Vive acá y no en `payment` porque ya
+   * no la usa solo el checkout: también es el link de login que viaja en el mail
+   * de bienvenida del alta.
+   */
+  dashboardUrl: stripTrailingSlash(process.env.APP_DASHBOARD_URL ?? 'http://localhost:3001'),
 }));
 
 export const databaseConfig = registerAs('database', () => ({
@@ -78,8 +89,7 @@ export const pushConfig = registerAs('push', () => ({
 
 export const paymentConfig = registerAs('payment', () => ({
   provider: process.env.PAYMENT_PROVIDER ?? 'mock',
-  // Public base URL of the dashboard app (used for the checkout return URL).
-  dashboardUrl: process.env.APP_DASHBOARD_URL ?? 'http://localhost:3001',
+  // La URL del dashboard (return URL del checkout) vive en `app.dashboardUrl`.
   // Public base URL of THIS API (used for the provider's webhook/notification URL).
   apiPublicUrl: process.env.API_PUBLIC_URL ?? 'http://localhost:3000',
   mercadoPago: {

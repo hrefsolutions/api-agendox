@@ -60,8 +60,10 @@ export class Organization extends AggregateRoot {
    * Es una baja lógica, no un borrado de filas: los turnos, los clientes y la
    * facturación siguen existiendo (hacen falta para historia y para cualquier
    * reclamo posterior), pero la organización deja de ser operativa y nadie
-   * puede volver a entrar. Un borrado físico dejaría huérfanas las tablas de
-   * todos los módulos y no es reversible ante un error del operador.
+   * puede volver a entrar. Se revierte con {@link reactivate}.
+   *
+   * El borrado físico existe aparte, como segundo paso explícito y sólo sobre
+   * organizaciones ya dadas de baja (ver `SuperAdminService.deleteOrganization`).
    */
   disable(now: Date): void {
     this.props.status = OrganizationStatus.Disabled;

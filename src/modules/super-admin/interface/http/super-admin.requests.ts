@@ -95,6 +95,15 @@ export class CreateOrganizationRequest {
   @ValidateIf((o: CreateOrganizationRequest) => o.billing === OrganizationBilling.Active)
   @IsUUID()
   planId?: string;
+
+  @ApiPropertyOptional({
+    default: true,
+    description:
+      'Manda al dueño el mail de bienvenida con el link al panel. Apagalo en cuentas internas o de QA.',
+  })
+  @IsOptional()
+  @IsBoolean()
+  sendWelcomeEmail?: boolean;
 }
 
 export class UpdateOwnerEmailRequest {

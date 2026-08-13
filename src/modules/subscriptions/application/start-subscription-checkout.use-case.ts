@@ -1,7 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
-import type { PaymentConfig } from '@config/configuration';
+import type { AppConfig, PaymentConfig } from '@config/configuration';
 import { CLOCK, type Clock } from '@shared/application';
 import { NotFoundError } from '@shared/errors';
 
@@ -30,6 +30,7 @@ export interface CheckoutView {
 @Injectable()
 export class StartSubscriptionCheckout {
   private readonly payment: PaymentConfig;
+  private readonly dashboardUrl: string;
 
   constructor(
     @Inject(PLAN_REPOSITORY) private readonly plans: PlanRepository,
@@ -39,6 +40,7 @@ export class StartSubscriptionCheckout {
     configService: ConfigService,
   ) {
     this.payment = configService.getOrThrow<PaymentConfig>('payment');
+    this.dashboardUrl = configService.getOrThrow<AppConfig>('app').dashboardUrl;
   }
 
   async execute(
@@ -62,7 +64,7 @@ export class StartSubscriptionCheckout {
       currency: plan.currency,
       frequencyMonths: plan.periodMonths,
       payerEmail,
-      backUrl: `${this.payment.dashboardUrl}/subscription?status=success`,
+      backUrl: `${this.dashboardUrl}/subscription?status=success`,
       notificationUrl: `${this.payment.apiPublicUrl}/api/v1/subscription/webhook`,
     });
 

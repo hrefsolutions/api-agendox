@@ -4,6 +4,7 @@
  */
 export type EmailTemplate =
   | 'otp'
+  | 'organization-welcome'
   | 'appointment-pending-deposit'
   | 'appointment-confirmed'
   | 'appointment-rejected'

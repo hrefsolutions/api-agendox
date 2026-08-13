@@ -17,7 +17,7 @@ import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { Public } from '@common/decorators/public.decorator';
 import { Roles } from '@common/decorators/roles.decorator';
 import { TenantId } from '@common/decorators/tenant-id.decorator';
-import type { PaymentConfig } from '@config/configuration';
+import type { AppConfig, PaymentConfig } from '@config/configuration';
 import { Role } from '@shared/domain';
 import { NotFoundError } from '@shared/errors';
 import type { StaffPrincipal } from '@common/tenant/request-context';
@@ -40,6 +40,7 @@ export class CheckoutRequest {
 @Controller('subscription')
 export class SubscriptionsController {
   private readonly payment: PaymentConfig;
+  private readonly dashboardUrl: string;
 
   constructor(
     private readonly getStatus: GetSubscriptionStatus,
@@ -50,6 +51,7 @@ export class SubscriptionsController {
     configService: ConfigService,
   ) {
     this.payment = configService.getOrThrow<PaymentConfig>('payment');
+    this.dashboardUrl = configService.getOrThrow<AppConfig>('app').dashboardUrl;
   }
 
   @Get()
@@ -109,6 +111,6 @@ export class SubscriptionsController {
       status: 'AUTHORIZED',
       paymentApproved: true,
     });
-    res.redirect(`${this.payment.dashboardUrl}/subscription?status=success`);
+    res.redirect(`${this.dashboardUrl}/subscription?status=success`);
   }
 }

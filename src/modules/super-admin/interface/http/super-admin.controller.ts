@@ -137,6 +137,23 @@ export class SuperAdminController {
   }
 
   /**
+   * Borrado definitivo: saca la organización y todas sus filas de la base.
+   *
+   * Ruta aparte del `DELETE` de arriba a propósito: ese es la baja lógica y se
+   * usa todos los días; este no tiene vuelta atrás. Responde 409 si la
+   * organización no está dada de baja todavía.
+   */
+  @Delete('organizations/:id/permanent')
+  @ApiBearerAuth()
+  @UseGuards(SuperAdminGuard)
+  deleteOrganization(
+    @Param('id') id: string,
+    @CurrentSuperAdmin() admin: SuperAdminPrincipal,
+  ): Promise<{ id: string; name: string; deletedRows: number }> {
+    return this.service.deleteOrganization(id, admin.superAdminId);
+  }
+
+  /**
    * Corrige el email del dueño. Importa más de lo que parece: ese email es el
    * `payer_email` que recibe la pasarela, así que un negocio creado con un email
    * de prueba no puede suscribirse hasta cambiarlo.
