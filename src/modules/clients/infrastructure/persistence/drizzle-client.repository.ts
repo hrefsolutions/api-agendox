@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { and, asc, eq, ilike, or, type SQL } from 'drizzle-orm';
+import { and, asc, eq, or, sql, type SQL, type SQLWrapper } from 'drizzle-orm';
 
 import { DRIZZLE, type Database } from '@database/database.constants';
 import { BaseDrizzleRepository } from '@database/drizzle/base.repository';
@@ -12,6 +12,31 @@ import type {
 } from '../../domain/repositories/client.repository';
 import { ClientMapper } from '../mappers/client.mapper';
 import { clients } from './client.schema';
+
+/** Campos que mira el buscador. `phone` y `notes` quedan afuera a propósito. */
+const SEARCHABLE_COLUMNS: readonly SQLWrapper[] = [
+  clients.firstName,
+  clients.lastName,
+  clients.email,
+  clients.whatsapp,
+];
+
+/**
+ * `%token%` con los comodines de LIKE escapados: sin esto, un `%` o un `_`
+ * tipeados por el usuario se interpretaban como patrón y no como texto literal.
+ */
+function likePattern(token: string): string {
+  return `%${token.replace(/[\\%_]/g, (char) => `\\${char}`)}%`;
+}
+
+/**
+ * `ILIKE` ignora mayúsculas pero NO tildes, así que "Sebastian" no encontraba a
+ * "Sebastián". `unaccent` normaliza los dos lados de la comparación; la
+ * extensión la crea `src/database/sql/clients-search-unaccent.sql` en el deploy.
+ */
+function matchesUnaccented(column: SQLWrapper, pattern: string): SQL {
+  return sql`unaccent(lower(${column})) LIKE unaccent(lower(${pattern}))`;
+}
 
 @Injectable()
 export class DrizzleClientRepository extends BaseDrizzleRepository implements ClientRepository {
@@ -46,15 +71,17 @@ export class DrizzleClientRepository extends BaseDrizzleRepository implements Cl
     const conditions: SQL[] = [eq(clients.organizationId, organizationId)];
     const q = options.q?.trim();
     if (q) {
-      const term = `%${q}%`;
-      conditions.push(
-        or(
-          ilike(clients.firstName, term),
-          ilike(clients.lastName, term),
-          ilike(clients.email, term),
-          ilike(clients.whatsapp, term),
-        )!,
-      );
+      // Un token por palabra, y cada token debe aparecer en ALGÚN campo: el
+      // nombre vive partido en dos columnas, así que comparar el término entero
+      // contra cada una por separado hacía que "prueba 1" no encontrara al
+      // cliente `first_name='prueba'` / `last_name='1'`. Tokenizar también
+      // acepta el orden invertido ("Cerutti Sebastián").
+      for (const token of q.split(/\s+/)) {
+        const term = likePattern(token);
+        conditions.push(
+          or(...SEARCHABLE_COLUMNS.map((column) => matchesUnaccented(column, term)))!,
+        );
+      }
     }
     const where = and(...conditions);
 
